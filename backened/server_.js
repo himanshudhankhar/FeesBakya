@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-
+var MongoClient = require('mongodb').MongoClient;
+var url = "mongodb://localhost:27017/";
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -202,66 +203,505 @@ if(!validRollNumber(student_details.rollnumber)){
     return;
 }
 //here we have to send entry to db
-
-
+student_details['active'] = true;
+MongoClient.connect(url, function(err, db) {
+    if (err) throw err;
+    var dbo = db.db("FeesBakya");
+    var myobj = student_details;
+    dbo.collection("student_details").insertOne(myobj, function(err, resp) {
+      if (err) {res.send({
+         error:true,
+         success:false,
+         errorMessage:"DataBase Error" 
+      });throw err;}
+res.send({
+success:true,
+error:false,
+errorMessage:"",
+student_details:student_details
+});
+console.log("student registerd");
+      db.close();
+    });
+  });
+///db part done
 
   });
 
   //2. confirm fees deposit
   app.post('/confirm_fees_deposit', (req, res) => {
     console.log(req.body.feesPaymentData);
-    res.send(
-      'Recieved your fees payment request!!',
-    );
+    // fees payment data includes{
+    //     feesAmount,
+    //     payment date,
+    //     rollnumber,
+    // }
+var feesPaymentData = req.body.feesPaymentData;
+
+ 
+
+if(feesPaymentData.feesAmount==undefined||feesPaymentData.feesAmount==null||feesPaymentData.feesAmount.length==0){
+    res.send({
+        success:false,
+        error:true,
+        errorMesage:"Fees Amount not entered"
+    });
+    return;
+}
+
+if(feesPaymentData.paymentDate==undefined||feesPaymentData.paymentDate==null||feesPaymentData.paymentDate.length==0){
+    res.send({
+        success:false,
+        error:true,
+        errorMesage:"Fees Payment Date not specified"
+    });
+    return;
+}
+
+if(feesPaymentData.rollnumber==undefined||feesPaymentData.rollnumber==null||feesPaymentData.rollnumber.length==0){
+    res.send({
+        success:false,
+        error:true,
+        errorMesage:"Payer's rollnumber not specified!!"
+    });
+    return;
+}
+// add payment to db
+MongoClient.connect(url, function(err, db) {
+    if (err) throw err;
+    var dbo = db.db("FeesBakya");
+    var myobj = feesPaymentData;
+    dbo.collection("fees_submission_details").insertOne(myobj, function(err, resp) {
+      if (err) {res.send({
+         error:true,
+         success:false,
+         errorMessage:"DataBase Error" 
+      });throw err;}
+res.send({
+success:true,
+error:false,
+errorMessage:"",
+feesPaymentData:feesPaymentData,
+});
+console.log("fees accepted");
+      db.close();
+    });
   });
+
+// part done.
+  });
+
+
 //3. Add Fees Rule
 app.post('/add_fees_rule', (req, res) => {
     console.log(req.body.feesRuleData);
-    res.send(
-      'Recieved your request to add new fees rule',
-    );
+    // fees rule data {
+    //     classs,
+    //     dateOfImplementation,
+    //     feesAmount,
+    // }
+var feesRuleData = req.body.feesRuleData;
+if(feesRuleData.classs==undefined||feesRuleData.classs==null||feesRuleData.classs.length==0){
+    res.send({
+        success:false,
+        error:true,
+        errorMesage:"class not specified!!"
+    })
+    return;
+}
+if(feesRuleData.dateOfImplementation==undefined||feesRuleData.dateOfImplementation==null||feesRuleData.dateOfImplementation.length==0){
+    res.send({
+        success:false,
+        error:true,
+        errorMesage:"date of implementation not specified!!"
+    })
+   
+  return;
+}
+if(feesRuleData.feesAmount==undefined||feesRuleData.feesAmount==null||feesRuleData.feesAmount.length==0){
+    res.send({
+        success:false,
+        error:true,
+        errorMesage:"fees amount not specified!!"
+    })
+    return;
+}
+//here we have to make second one inactive and make one more entry
+
+MongoClient.connect(url, function(err, db) {
+    if (err) throw err;
+    var dbo = db.db("FeesBakya");
+    var myquery = { classs: feesRuleData.classs };
+    var newvalues = { $set: {active:false , endDate:feesRuleData.dateOfImplementation} };
+    dbo.collection("fees_rules_details").updateOne(myquery, newvalues, function(err, resp) {
+      if (err) {
+    res.send({
+        error:true,
+        success:false,
+        errorMessage:"DataBase Error" 
+    });throw err;
+    }
+      console.log("rule upadted first");
+      /////////////////////////////////////////
+      feesRuleData['active'] = true;
+        feesRuleData['endDate']=null;
+    var myobj = feesRuleData;
+    dbo.collection("fees_rules_details").insertOne(myobj, function(err, resp) {
+      if (err) {res.send({
+         error:true,
+         success:false,
+         errorMessage:"DataBase Error" 
+      });throw err;}
+res.send({
+success:true,
+error:false,
+errorMessage:"",
+feesPaymentData:feesRuleData,
+});
+console.log("fees rule accepted");
+      db.close();
+    });
+      ///////////////////////////////////////////
   });
+//Fees Rules Data added to DB
+
+    
+  });
+
+  });
+
+
+
+
   //4. Add Balance
   app.post('/deposit_balance', (req, res) => {
     console.log(req.body.depositExtraBalance);
-    res.send(
-      'Recieved your request to add new transaction to ' + req.body.depositExtraBalance.debitORcredit,
-    );
+    // deposit balance includes{
+    //     rollnumber,
+    //     amount,
+    //     comment,
+    //     take_or_give,
+    //     paymentDate,
+    // }
+var depositExtraBalance = req.body.depositExtraBalance;
+
+if(depositExtraBalance.rollnumber==undefined||depositExtraBalance.rollnumber==null||depositExtraBalance.rollnumber.length==0){
+    res.send({
+        error:true,
+        success:false,
+        errorMessage:"roll number not specified!!" 
+    });
+    return;
+}
+if(depositExtraBalance.comment==undefined||depositExtraBalance.comment==null||depositExtraBalance.comment.length==0){
+    res.send({
+        error:true,
+        success:false,
+        errorMessage:"comment not specified!!" 
+    });
+    return;
+}
+
+if(depositExtraBalance.amount==undefined||depositExtraBalance.amount==null||depositExtraBalance.amount.length==0){
+    res.send({
+        error:true,
+        success:false,
+        errorMessage:"amount not specified!!" 
+    });
+    return;
+}
+
+if(depositExtraBalance.take_or_give==undefined||depositExtraBalance.take_or_give==null||depositExtraBalance.take_or_give.length==0){
+    res.send({
+        error:true,
+        success:false,
+        errorMessage:"take or give not specified!!" 
+    });
+    return;
+}
+if(depositExtraBalance.paymentDate==undefined||depositExtraBalance.paymentDate==null||depositExtraBalance.paymentDate.length==0){
+    res.send({
+        error:true,
+        success:false,
+        errorMessage:"take or give not specified!!" 
+    });
+    return;
+}
+MongoClient.connect(url, function(err, db) {
+    if (err) throw err;
+    var dbo = db.db("FeesBakya");
+    var myobj = depositExtraBalance;
+    dbo.collection("balance_credit_debit_details").insertOne(myobj, function(err, resp) {
+      if (err) {res.send({
+         error:true,
+         success:false,
+         errorMessage:"DataBase Error" 
+      });throw err;}
+res.send({
+success:true,
+error:false,
+errorMessage:"",
+feesPaymentData:depositExtraBalance,
+});
+console.log("credit/debit accepted");
+      db.close();
+    });
   });
+  //balance credit debit
+  });
+
+
   //5. Remove Student Confirmation
   app.post('/removeStudentConfirmation', (req, res) => {
     console.log(req.body.removedStudentDetails);
-    res.send(
-      'recieved your request to remove the student'+req.body.removedStudentDetails.name,
-    );
+    // removed student details inclue{
+    //     rollnumber
+    // }
+var removedStudentDetails = req.body.removedStudentDetails;
+if(removedStudentDetails.rollnumber==undefined||removedStudentDetails.rollnumber==null||removedStudentDetails.rollnumber.length==0){
+    res.send({
+        error:true,
+        success:false,
+        errorMessage:"roll number not specified!!" 
+    });
+    return;
+}
+
+MongoClient.connect(url, function(err, db) {
+    if (err) throw err;
+    var dbo = db.db("FeesBakya");
+    var myquery = { rollnumber: removedStudentDetails.rollnumber };
+    var newvalues = { $set: {active:false} };
+    dbo.collection("student_details").updateOne(myquery, newvalues, function(err, resp) {
+      if (err) {
+       res.send({
+           error:true,
+           success:false,
+           errorMessage:"database errror"
+       });
+        throw err;
+      }console.log("student made unactive");
+      db.close();
+    });
   });
+//done here
+
+  });
+
+
   //6.add new academic session
   app.post('/add_new_academic_session', (req, res) => {
     console.log(req.body.newAcademicSession);
-    res.send(
-      'Recieved your request to add new academic session for ' + req.body.newAcademicSession.class +' start from ' + req.body.newAcademicSession.startDate,
-    );
+    var newAcadmeicSession=req.body.newAcadmeicSession;
+    // newAcadmic session includes{
+    //     startdate,
+    //     classs.
+    // }
+if(newAcadmeicSession.startDate==undefined||newAcadmeicSession.startDate==null||newAcadmeicSession.startDate.length==0){
+    res.send({
+        error:true,
+        success:false,
+        errorMessage:"Start Date not specified" 
+    });
+    return;
+}
+if(newAcadmeicSession.classs==undefined||newAcadmeicSession.classs==null||newAcadmeicSession.length==0){
+    res.send({
+        error:true,
+        success:false,
+        errorMessage:"class not specified" 
+    });
+    return;
+}
+
+
+    newAcadmeicSession['active'] = true,
+    newAcadmeicSession['endDate']=null;
+
+    MongoClient.connect(url, function(err, db) {
+        if (err) throw err;
+        var dbo = db.db("FeesBakya");
+        var myquery = { classs:newAcadmeicSession.classs,  };
+        var newvalues = { $set: {active:false,endDate: newAcadmeicSession.startDate} };
+        dbo.collection("academic_sessions_increament_dates").updateOne(myquery, newvalues, function(err, resp) {
+          if (err){
+            res.send({
+                error:true,
+                success:false,
+                errorMessage:"database errror" 
+            }) ;
+            throw err;}
+          console.log("academic session updated");
+          dbo.collection("academic_sessions_increament_dates").insertOne(newAcadmeicSession, function(err, resp) {
+            if (err) {res.send({
+               error:true,
+               success:false,
+               errorMessage:"DataBase Error" 
+            });throw err;}
+      res.send({
+      success:true,
+      error:false,
+      errorMessage:"",
+      academicSession:newAcadmeicSession,
+      });
+      console.log("new rule added");
+            db.close();
+          });
+         
+        });
+      });
+
+
+
   });
 //7. modify student details
 app.post('/modifyStudentDetails', (req, res) => {
     console.log(req.body.modifyStudentDetails);
-    res.send(
-      'Recieved your request to modify student details for ' + req.body.modifyStudentDetails.studentName,
-    );
+var modifyStudentDetails = req.body.modifyStudentDetails;
+// modify student details include{
+//  roll number 
+// }
+if(modifyStudentDetails==undefined||modifyStudentDetails==null){
+    res.send({
+        error:true,
+        success:false,
+        errorMessage:"provide student details" 
+    });
+    return;
+}
+if(modifyStudentDetails.rollnumber==undefined||modifyStudentDetails.rollnumber==null||modifyStudentDetails.rollnumber.length==0){
+    res.send({
+        error:true,
+        success:false,
+        errorMessage:"roll number not specified" 
+    });
+    return;
+}
+
+MongoClient.connect(url, function(err, db) {
+    if (err) throw err;
+    var dbo = db.db("FeesBakya");
+    var myquery = { rollnumber: modifyStudentDetails.rollnumber };
+    var newvalues = { $set:  modifyStudentDetails };
+    dbo.collection("student_details").updateOne(myquery, newvalues, function(err, resp) {
+      if (err) {
+       res.send({
+           error:true,
+           success:false,
+           errorMessage:"database errror"
+       });
+        throw err;
+      }console.log("student modified easily");
+      db.close();
+    });
+  });
+
+//student details modified
+    
   });
 //8. delete the added fees rule ( rule number should be provided).
 app.post('/deleteAddedFeesRule', (req, res) => {
     console.log(req.body.deleteAddedFeesRule);
-    res.send(
-      'Recieved your request to delete Added Fees Rule ' + req.body.deleteAddedFeesRule.ruleID,
-    );
+   var deleteAddedFeesRule = req.body.deleteAddedFeesRule;
+//    delete Added Fees Rule includes {
+//    classs, (active rule right now)
+//    }
+if(deleteAddedFeesRule.classs == undefined || deleteAddedFeesRule.classs == null||deleteAddedFeesRule.classs.length==0){
+    res.send({
+        error:true,
+        success:false,
+        errorMessage:"class not specified"
+    });
+    return;
+}
+if(deleteAddedFeesRule.startDate==undefined||deleteAddedFeesRule.startDate==null||deleteAddedFeesRule.startDate.length==0){
+  res.send({
+    error:true,
+    success:false,
+    errorMessage:"start date not specified"
+  });
+  return;
+}
+//delete first and then make update
+
+MongoClient.connect(url, function(err, db) {
+    if (err) throw err;
+    var dbo = db.db("FeesBakya");
+    var myquery = { classs: deleteAddedFeesRule.classs , active:true};
+    dbo.collection("fees_rules_details").deleteOne(myquery, function(err, obj) {
+      if (err){
+        res.send({
+            error:true,
+            success:false,
+            errorMessage:"database error"
+        });
+        throw err;
+    }
+      console.log("active fees rule deleted");
+      var mquery = {
+          classs:deleteAddedFeesRule.classs , endDate : deleteAddedFeesRule.startDate
+      }
+      var newvalues = {$set : {endDate:null,active:true}}
+      dbo.collection("fees_rules_details").updateOne(mquery, newvalues, function(err, res) {
+        if (err) throw err;
+        console.log("updated last fees rule");
+        db.close();
+      });
+    });
+  });
+
   });
   //9. delete the added acadmeic starting time
   app.post('/deleteAddedAcademicSessionRule', (req, res) => {
     console.log(req.body.deleteAddedAcademicSessionRule);
-    res.send(
-      'Recieved your request to delete Added acadmeic session Rule ' + req.body.deleteAddedAcademicSessionRule.ruleASID,
-    );
+    var deleteAddedAcademicSessionRule = req.body.deleteAddedAcademicSessionRule;
+    if(deleteAddedAcademicSessionRule.classs==undefined||deleteAddedAcademicSessionRule.classs==null||deleteAddedAcademicSessionRule.classs.length==0){
+      res.send({
+        error:true,
+        success:false,
+        errorMessage:"class not specified!!"
+      });
+      return;
+    }
+
+    if(deleteAddedAcademicSessionRule.startDate==undefined||deleteAddedAcademicSessionRule.startDate==null||deleteAddedAcademicSessionRule.startDate.length==0){
+      res.send({
+        error:true,
+        success:false,
+        errorMessage:"start date not specified!!"
+      });
+      return;
+    }
+
+
+    MongoClient.connect(url, function(err, db) {
+      if (err) throw err;
+      var dbo = db.db("FeesBakya");
+      var myquery = { classs: deleteAddedAcademicSessionRule.classs , active:true };
+      dbo.collection("academic_sessions_increament_dates").deleteOne(myquery, function(err, obj) {
+        if (err){
+          res.send({
+              error:true,
+              success:false,
+              errorMessage:"database error"
+          });
+          throw err;
+      }
+        console.log("active session rule deleted");
+        var mquery = {
+            classs:deleteAddedAcademicSessionRule.classs , endDate : deleteAddedAcademicSessionRule.startDate
+        }
+        var newvalues = {$set : {endDate:null,active:true}}
+        dbo.collection("academic_sessions_increament_dates").updateOne(mquery, newvalues, function(err, res) {
+          if (err) throw err;
+          console.log("updated last session rule");
+          db.close();
+        });
+      });
+    });
+
+
+
   });
 
 
@@ -269,33 +709,411 @@ app.post('/deleteAddedFeesRule', (req, res) => {
   //GET requests important ...................................................................................................
 //1. is rollnumber available
 app.get('/isRollNumberAvailable/:rollnumber', (req, res) => {
-    res.send("maybe available"+req.query.rollnumber);
+  //use class_rollnumber_record
+
+  var rollnumber = req.query.rollnumber.toString();
+  //now check the  Se2016054
+  if(rollnumber==undefined||rollnumber==null||!validRollNumber(rollnumber)){
+    res.send({
+      error:true,
+      success:false,
+      errorMessage:"roll number not valid!!"
+    });
+    return;
+  }
+  
+  var askedNumbering = parseInt(rollnumber.substring(6, 9));
+  var classes = {
+     'Lk' :"LKG",
+    'Uk':"UKG",
+    'Fi':'First',
+    'Se':'Second',
+    'Th':"Third",
+    'Fu':'Fourth',
+    'Fi':"Fifth",
+    'Sx':"Sixth",
+    'Sv':"Seventh",
+    "Eg":'Eight',
+    'Nn':"Ninth",
+    'Tn':"Tenth",
+    'El':"Eleventh",
+    "Tw":"Twelfth"
+  }
+
+  MongoClient.connect(url, function(err, db) {
+    if (err){ 
+      res.send({
+        error:true,
+        success:false,
+        errorMessage:"database connection error"
+      });
+      throw err};
+    var dbo = db.db("FeesBakya");
+    dbo.collection("class_rollnumber_record").findOne({classs:classes[rollnumber.substr(0,2)]}, function(err, result) {
+      if (err){ 
+        res.send({
+          error:true,
+          success:false,
+          errorMessage:"database error!!"
+        });
+        throw err;
+      }
+      console.log(result.availableRollnumber);
+      var rolls = parseInt(result.availableRollnumber);//you have to store the number not the rollnumber
+      if(rolls==askedNumbering){
+        res.send({
+          error:false,success:true,successMessage:"Available"
+        });
+      }else{
+        res.send({
+          error:true,success:false,errorMessage:"Not Available!!"
+        });
+      }
+      db.close();
+    });
+  });
+
+  
+  //res.send("maybe available"+req.query.rollnumber);
+
   });
 //2. get rollnumber for class z
-app.get('/getRollNumber/:class', (req, res) => {
-    res.send("fetching rollnumber for "+req.query.class);
+app.get('/getRollNumber/:classs', (req, res) => {
+   var classes = req.query.classs;
+   if(classes==undefined||classes==null||classes.length==0){
+      res.send({
+        error:true,
+        success:false,
+        errorMessage:"class not specified!!"
+      });
+      return;
+   } 
+
+
+
+   var classess = {
+    'Lk' :"LKG",
+   'Uk':"UKG",
+   'Fi':'First',
+   'Se':'Second',
+   'Th':"Third",
+   'Fu':'Fourth',
+   'Fi':"Fifth",
+   'Sx':"Sixth",
+   'Sv':"Seventh",
+   "Eg":'Eight',
+   'Nn':"Ninth",
+   'Tn':"Tenth",
+   'El':"Eleventh",
+   "Tw":"Twelfth"
+ }
+var varr = classess[classes];
+
+if(varr==undefined||varr==null||varr.length==0){
+  res.send({
+    error:true,
+    success:false,
+    errorMessage:"invalid class specified!!"
+  });
+  return;
+}
+ MongoClient.connect(url, function(err, db) {
+   if (err){ 
+     res.send({
+       error:true,
+       success:false,
+       errorMessage:"database connection error"
+     });
+     throw err};
+   var dbo = db.db("FeesBakya");
+   dbo.collection("class_rollnumber_record").findOne({classs:varr}, function(err, result) {
+     if(err){ 
+       res.send({
+         error:true,
+         success:false,
+         errorMessage:"database error!!"
+       });
+       throw err;
+     }
+     if(result==undefined||result==null){
+       res.send({
+         error:true,
+         success:false,
+         errorMessage:"undefined search result"
+       });
+
+     }else{
+    var numberr = result.availableRollnumber;
+    if(numberr==undefined||numberr ==null){
+      res.send({
+        error:true,
+        success:false,
+        errorMessage:"some strange error"
+      });
+    }else{
+      var num = parseInt(numberr);
+      if(num<100){
+        numberr = '0' + numberr.toString();
+      }
+      res.send({
+        error:false,
+        success:true,
+        errorMessage:"",
+        successMessage:classes + Date().getYear() + numberr
+      });
+    }
+     }
+     db.close();
+   });
+ });
+
   });
 //3. total students year.
-app.get('/getTotalStudentsInYear/:year', (req, res) => {
-    res.send("fetching total students for year "+req.query.year);
+app.get('/getTotalActiveStudentsFromYear/:year', (req, res) => {
+    var yr = req.query.year;
+    if(yr==undefined||yr==null||yr.length==0){
+      res.send({
+        error:true,
+        success:false,
+        errorMessage:"Year not specified!!",
+      });
+      return;
+    }
+
+    // all active students with year in doe is smaller than year specified;
+    //db query for finding all the students who are active 
+    
+  MongoClient.connect(url, function(err, db) {
+    if (err){ 
+      res.send({
+        error:true,
+        success:false,
+        errorMessage:"database connection error"
+      });
+      throw err};
+    var dbo = db.db("FeesBakya");
+    dbo.collection("student_details").find({active:true}, function(err, result) {
+      if (err){ 
+        res.send({
+          error:true,
+          success:false,
+          errorMessage:"database error!!"
+        });
+        throw err;
+      }
+      //result will be an array of collections
+      //it is assumed that some of the students will be active there
+      var countTotalInYr=0;
+      for(let i =0;i<result.length;i++){
+          if(parseInt(Date(result[i].doe).getYear().toString())<=parseInt(yr) ){
+            countTotalInYr+=1;
+          }
+      }
+
+      res.send({
+        error:false,
+        success:true,
+        successMessage:countTotalInYr + " students are still active from this year!!"
+      });
+      db.close();
+    });
+  });
+
+
   });
 //4. total faculties in year.
 app.get('/getTotalFacultiesInYear/:year', (req, res) => {
     res.send("fetching total faculties for year "+req.query.year);
-  });
+  }); // will do it later
 //5. fees collected in year 
 app.get('/getFeesCollectedInYear/:year', (req, res) => {
-    res.send("fetching total fees collected for year "+req.query.year);
+   var yr = req.query.year;
+   if(yr==undefined||yr==null||yr.length==0){
+     res.send({
+       error:true,
+       success:false,
+       errorMessage:"Year not specified!!"
+     });
+     return;
+   }
+
+ MongoClient.connect(url, function(err, db) {
+    if (err){ 
+      res.send({
+        error:true,
+        success:false,
+        errorMessage:"database connection error"
+      });
+      throw err};
+    var dbo = db.db("FeesBakya");
+    dbo.collection("fees_submission_details").find({}, function(err, result) {
+      if (err){ 
+        res.send({
+          error:true,
+          success:false,
+          errorMessage:"database error!!"
+        });
+        throw err;
+      }
+      //result will be an array of collections
+      //it is assumed that some of the students will be active there
+      var countTotalInYr=0;
+      for(let i =0;i<result.length;i++){
+          if(parseInt(Date(result[i].paymentDate).getYear().toString())==parseInt(yr) ){
+            countTotalInYr+=parseInt(result[i].feesAmount);
+          }
+      }
+
+      res.send({
+        error:false,
+        success:true,
+        successMessage:"Rs." + countTotalInYr + " Fees collected in year "+yr+"."
+      });
+      db.close();
+    });
+  });
+
+
   });
   //6. request cannot be full filled.
 //7. get student details
-app.get('/getStudentDetails/:rollNumber/:class/:name', (req, res) => {
-    res.send("fetching Student Details "+req.query.rollnumber +","+req.query.class+","+req.query.name);
+app.get('/getStudentDetails/:rollNumber/:classs/:name', (req, res) => {
+     var rollnumber = req.query.rollnumber;
+     var classs = req.query.classs;
+     var name = req.query.name;
+if((name==undefined||name==null||name.length==0)||(rollnumber==undefined||rollnumber==null||rollnumber.length==0||!validRollNumber(rollnumber))||(classs==undefined||classs==null||classs.length==0)){
+res.send({
+  error:true,
+        success:false,
+        errorMessage:"name , rollnumber , class not defined or not in proper syntax!!"
+});
+return;
+}
+var students_found=[];
+
+//make mongo request here!!
+
+MongoClient.connect(url, function(err, db) {
+  if (err){ 
+    res.send({
+      error:true,
+      success:false,
+      errorMessage:"database connection error"
+    });
+    throw err};
+  var dbo = db.db("FeesBakya");
+  dbo.collection("student_details").find({active:true}, function(err, result) {//just fetch all students
+    if (err){ 
+      res.send({
+        error:true,
+        success:false,
+        errorMessage:"database error!!"
+      });
+      throw err;
+    }
+    //result will be an array of collections
+    //it is assumed that some of the students will be active there
+    for(let i=0;i<results.length;i++){
+      if(results[i].rollnumber == rollnumber){
+        students_found.push(results[i]);
+      }else if(part_of_name_matches(result[i].student_name,name)){
+        students_found.push(result[i]);
+      }else if(classCalculated(result[i].doe,result[i].classs)==classs){
+        students_found.push(result[i]);
+      }
+    }
+
+    res.send({
+      error:false,
+      success:true,
+      students_found:students_found,
+      successMessage:"This list can be empty!!"
+    });
+
+
+
+    db.close();
   });
+});
+
+
+
+})
+  ;
 //8. get defaulters by name / roll number / class
-app.get('/getDefaultersDetails/:rollNumber/:class/:name', (req, res) => {
-    res.send("fetching Defaulters Student Details "+req.query.rollnumber +","+req.query.class+","+req.query.name);
+app.get('/getDefaultersDetails/:rollnumber/:classs/:name', (req, res) => {
+  var rollnumber = req.query.rollnumber;
+  var classs = req.query.classs;
+  var name = req.query.name;
+if((name==undefined||name==null||name.length==0)||(rollnumber==undefined||rollnumber==null||rollnumber.length==0||!validRollNumber(rollnumber))||(classs==undefined||classs==null||classs.length==0)){
+res.send({
+error:true,
+     success:false,
+     errorMessage:"name , rollnumber , class not defined or not in proper syntax for defaulters api!!"
+});
+return;
+}
+//now find that student and all the transactions related to it;
+ 
+var defaulters=[];
+MongoClient.connect(url, function(err, db) {
+  if (err){ 
+    res.send({
+      error:true,
+      success:false,
+      errorMessage:"database connection error"
+    });
+    throw err};
+  var dbo = db.db("FeesBakya");
+  dbo.collection("students_balance_sheet").find({}, function(err, result) {//just fetch all students
+    if (err){
+      res.send({ 
+        error:true,
+        success:false,
+        errorMessage:"database error!!"
+      });
+      throw err;
+    }
+    for(let i=0;i<result.length;i++){
+      if(parseInt(result[i].amount)<0){
+        defaulters.push({
+          rollnumber:result[i].rollnumber,
+          amount:result[i].amount
+        });
+      }
+    }
+    //find the student details
+    dbo.collection("student_details").find({},function(errors,resultt){
+      if(errors){
+        res.send({
+          error:true,
+          success:false,
+          errorMessage:"Error in database!!"
+        });
+      throw errors;
+      }
+      for(let i=0;i<resultt.length;i++){
+        if(defaulters[i].rollnumber==resultt.rollnumber){
+          defaulters[i]['details']=resultt;
+          continue;
+        }
+      }
+      res.send({
+        success:true,
+        error:false,
+        successMessage:"Found defaulters list",
+        defaultersList:defaulters
+      });
+      db.close();      
+    });
+
+
+    
   });
+  });
+});
+
+  
 //9. all transactions by rollnumber includes paid as well deducted
 app.get('/allTransaction/:rollNumber', (req, res) => {
     res.send("fetching all transactions for "+req.query.rollnumber );

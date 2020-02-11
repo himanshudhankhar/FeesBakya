@@ -113,3 +113,19 @@ client.connect(function(err) {
  
 });
 
+
+client.connect(function(err) {
+  assert.equal(null, err);
+  console.log("Connected successfully to server");
+  const db = client.db("FeesBakya");
+    db.createCollection("students_balance_sheet",function(error,collectn){
+            if(error){
+                console.log(error);
+                return;
+            }
+            console.log("students_balance_sheet created",collectn.collectionName);
+            client.close();
+    });
+ 
+});
+ 
