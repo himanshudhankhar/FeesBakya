@@ -208,14 +208,34 @@ app.post('/register_student', (req, res) => {
         });
         throw err;
       }
-      res.send({
-        success: true,
-        error: false,
-        errorMessage: "",
-        student_details: student_details
+
+      console.log("student registerd"); //add 0 balance to the balaance sheet as well
+      var newBalanceHolder = {
+        rollnumber: student_details.rollnumber,
+        amountTotal: 0,
+        classs: student_details.classs,
+        active:true
+      }
+      dbo.collection("student_balance_sheet").insertOne(newBalanceHolder, function (errors, respp) {
+        if (errors) {
+          res.send({
+            error: true,
+            success: false,
+            errorMessage: "Critical Database Error"
+          });
+          throw errors;
+        }
+        res.end({
+          success: true,
+          error: false,
+          successMessage: "Student Added to registery as well as BalanceSheet"
+        });
+        db.close();
       });
-      console.log("student registerd");
-      db.close();
+
+
+
+
     });
   });
   ///db part done
@@ -290,15 +310,57 @@ app.post('/confirm_fees_deposit', (req, res) => {
               res.send({
                 error: true,
                 success: false,
-                errorMessage: "critial DataBase Error"
+                errorMessage: "critial DataBase Error while reading from balance sheet!!"
               });
+              console.log("Big failure!!");
               throw erroring;
             }
           });
 
-
-          throw err;
+          console.log("write in fees submission but not in students balance sheet!!");
+          throw errorr;
         }
+        //no error suppose
+        var initialAmount = respp.amountTotal; // here error can come
+        db.collection("students_balance_sheet").updateOne({
+          rollnumber: respp.rollnumber
+        }, {
+          $set: {
+            amountTotal: parseInt(initialAmount) + parseInt(feesPaymentData.feesAmount)
+          }
+        }, (eror, reesp) => {
+          if (eror) {
+            res.send({
+              error: true,
+              success: false,
+              errorMessage: "DataBase Error"
+            });
+            dbo.collection("fees_submission_details").deleteOne({
+              _id: resp._id
+            }, (erroring, resposnse) => {
+              if (erroring) {
+                res.send({
+                  error: true,
+                  success: false,
+                  errorMessage: "critial DataBase Error while writing in balance sheet"
+                });
+                console.log("Big failure!!");
+                throw erroring;
+              }
+            });
+
+            console.log("write in fees submission but not in students balance sheet!!");
+            throw eror;
+          }
+
+          //you have updated successfully 
+          res.send({
+            error: false,
+            success: true,
+            successMessage: "successfuly updated balance sheet and fees transaction!!"
+          });
+          //done here all parts
+        });
       })
     });
   });
@@ -321,7 +383,7 @@ app.post('/add_fees_rule', (req, res) => {
       success: false,
       error: true,
       errorMesage: "class not specified!!"
-    })
+    });
     return;
   }
   if (feesRuleData.dateOfImplementation == undefined || feesRuleData.dateOfImplementation == null || feesRuleData.dateOfImplementation.length == 0) {
@@ -329,7 +391,7 @@ app.post('/add_fees_rule', (req, res) => {
       success: false,
       error: true,
       errorMesage: "date of implementation not specified!!"
-    })
+    });
 
     return;
   }
@@ -365,7 +427,7 @@ app.post('/add_fees_rule', (req, res) => {
         throw err;
       }
       console.log("rule upadted first");
-      /////////////////////////////////////////
+
       feesRuleData['active'] = true;
       feesRuleData['endDate'] = null;
       var myobj = feesRuleData;
@@ -387,11 +449,9 @@ app.post('/add_fees_rule', (req, res) => {
         console.log("fees rule accepted");
         db.close();
       });
-      ///////////////////////////////////////////
+
     });
-    //Fees Rules Data added to DB
-
-
+    //Fees Rules Data added to D
   });
 
 });
@@ -457,6 +517,13 @@ app.post('/deposit_balance', (req, res) => {
     if (err) throw err;
     var dbo = db.db("FeesBakya");
     var myobj = depositExtraBalance;
+    //you have to make it positive or negative
+    if (myobj.take_or_give == "take") {
+      //uss se lene hain then make amount negative
+      myobj.amount = -abs(myobj.amount);
+    } else {
+      myobj.amount = abs(myobj.amount);
+    }
     dbo.collection("balance_credit_debit_details").insertOne(myobj, function (err, resp) {
       if (err) {
         res.send({
@@ -466,14 +533,23 @@ app.post('/deposit_balance', (req, res) => {
         });
         throw err;
       }
-      res.send({
-        success: true,
-        error: false,
-        errorMessage: "",
-        feesPaymentData: depositExtraBalance,
-      });
-      console.log("credit/debit accepted");
-      db.close();
+      dbo.collection("students_balance_sheet").findOneAndUpdate({
+        rollnumber: myobj.rollnumber
+      }, {
+        $inc: {
+          amountTotal: myobj.amount
+        }
+      }, (erorrr, resppp) => {
+        if(erorrr){
+          res.send({
+            error:true,
+            success:false,
+            errorMessage:"Critical database error!!"
+          });
+          throw erorrr;
+        }
+
+      })
     });
   });
   //balance credit debit
@@ -515,9 +591,29 @@ app.post('/removeStudentConfirmation', (req, res) => {
           errorMessage: "database errror"
         });
         throw err;
+      }//remove it from balance sheet as well
+      var newwValues ={
+        $set:{
+          active:false
+        }
       }
-      console.log("student made unactive");
-      db.close();
+     dbo.collection("students_balance_sheet").updateOne({rollnumber:myquery.rollnumber},newwValues,function(erorr,respp){
+if(erorr){
+  res.send({
+    error:true,
+    success:false,
+    errorMessage:"Critical Database updation error!!"
+  });
+  throw erorr;
+}
+
+res.send({
+  success:true,
+  error:false,
+  successMessage:"Made Student inactive, it may be a defaulter"
+});
+db.close();
+     });
     });
   });
   //done here
@@ -635,6 +731,7 @@ app.post('/modifyStudentDetails', (req, res) => {
       $set: modifyStudentDetails
     };
     dbo.collection("student_details").updateOne(myquery, newvalues, function (err, resp) {
+      
       if (err) {
         res.send({
           error: true,
@@ -643,6 +740,7 @@ app.post('/modifyStudentDetails', (req, res) => {
         });
         throw err;
       }
+      
       console.log("student modified easily");
       db.close();
     });
@@ -1205,14 +1303,14 @@ app.get('/getDefaultersDetails/:rollnumber/:classs/:name', (req, res) => {
 app.get('/allTransaction/:rollNumber', (req, res) => {
   res.send("fetching all transactions for " + req.query.rollnumber);
 });
-//10. academic dates
-app.get('/academicStartDates/:class', (req, res) => {
-  res.send("fetching all dates for " + req.query.class);
-});
-//11. get all payments by student X
-app.get('/allPaymentsByStudent/:rollNumber', (req, res) => {
-  res.send("fetching all payments by " + req.query.rollnumber);
-});
+//10. academic dates // no need for this api we dont need this dates
+// app.get('/academicStartDates/:class', (req, res) => {
+//   res.send("fetching all dates for " + req.query.class);
+// });
+//X11. get all payments by student X no need for this api just show all the transactions imposed on him
+// app.get('/allPaymentsByStudent/:rollNumber', (req, res) => {
+//   res.send("fetching all payments by " + req.query.rollnumber);
+// });
 //12. current fees rule for class X
 app.get('/currentFeesRule/:class', (req, res) => {
   res.send("fetching current fees rule for " + req.query.class);
@@ -1222,16 +1320,28 @@ app.get('/allFeesRules', (req, res) => {
   res.send("fetching all fees rules for all classes");
 });
 //14 same as 10
-//15. get all acadmeic dates all classes
-app.get('/allClassesDates', (req, res) => {
-  res.send("fetching all classes dates");
+//X15. get all acadmeic dates all classes this api is not needed
+// app.get('/allClassesDates', (req, res) => {
+//   res.send("fetching all classes dates");
+// });
+//X16 get all deductions of student //no need for this api just show the all transactions
+// app.get('/allDeductionsForStudent/:rollNumber', (req, res) => {
+//   res.send("fetching all deductions for " + req.query.rollnumber);
+// });
+
+//this api to be used for passing a student
+app.post("/changeClassStudent",(req,res)=>{
+var studentDetails = req.body.studentDetails;
+// studentDetails contains {
+  // student rollnumber 
+  // student new class
+// }
+
+//first change in the student_details then in students_balance_sheet
+
+
+
+
 });
-//16 get all deductions of student 
-app.get('/allDeductionsForStudent/:rollNumber', (req, res) => {
-  res.send("fetching all deductions for " + req.query.rollnumber);
-});
-
-
-
 
 app.listen(port, () => console.log(`Listening on port ${port}`));
