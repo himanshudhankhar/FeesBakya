@@ -214,7 +214,7 @@ app.post('/register_student', (req, res) => {
         rollnumber: student_details.rollnumber,
         amountTotal: 0,
         classs: student_details.classs,
-        active:true
+        active: true
       }
       dbo.collection("student_balance_sheet").insertOne(newBalanceHolder, function (errors, respp) {
         if (errors) {
@@ -540,11 +540,11 @@ app.post('/deposit_balance', (req, res) => {
           amountTotal: myobj.amount
         }
       }, (erorrr, resppp) => {
-        if(erorrr){
+        if (erorrr) {
           res.send({
-            error:true,
-            success:false,
-            errorMessage:"Critical database error!!"
+            error: true,
+            success: false,
+            errorMessage: "Critical database error!!"
           });
           throw erorrr;
         }
@@ -591,29 +591,31 @@ app.post('/removeStudentConfirmation', (req, res) => {
           errorMessage: "database errror"
         });
         throw err;
-      }//remove it from balance sheet as well
-      var newwValues ={
-        $set:{
-          active:false
+      } //remove it from balance sheet as well
+      var newwValues = {
+        $set: {
+          active: false
         }
       }
-     dbo.collection("students_balance_sheet").updateOne({rollnumber:myquery.rollnumber},newwValues,function(erorr,respp){
-if(erorr){
-  res.send({
-    error:true,
-    success:false,
-    errorMessage:"Critical Database updation error!!"
-  });
-  throw erorr;
-}
+      dbo.collection("students_balance_sheet").updateOne({
+        rollnumber: myquery.rollnumber
+      }, newwValues, function (erorr, respp) {
+        if (erorr) {
+          res.send({
+            error: true,
+            success: false,
+            errorMessage: "Critical Database updation error!!"
+          });
+          throw erorr;
+        }
 
-res.send({
-  success:true,
-  error:false,
-  successMessage:"Made Student inactive, it may be a defaulter"
-});
-db.close();
-     });
+        res.send({
+          success: true,
+          error: false,
+          successMessage: "Made Student inactive, it may be a defaulter"
+        });
+        db.close();
+      });
     });
   });
   //done here
@@ -731,7 +733,7 @@ app.post('/modifyStudentDetails', (req, res) => {
       $set: modifyStudentDetails
     };
     dbo.collection("student_details").updateOne(myquery, newvalues, function (err, resp) {
-      
+
       if (err) {
         res.send({
           error: true,
@@ -740,7 +742,7 @@ app.post('/modifyStudentDetails', (req, res) => {
         });
         throw err;
       }
-      
+
       console.log("student modified easily");
       db.close();
     });
@@ -1301,7 +1303,65 @@ app.get('/getDefaultersDetails/:rollnumber/:classs/:name', (req, res) => {
 
 //9. all transactions by rollnumber includes paid as well deducted
 app.get('/allTransaction/:rollNumber', (req, res) => {
-  res.send("fetching all transactions for " + req.query.rollnumber);
+  var rollnumber = req.query.rollNumber;
+  if (rollnumber == undefined || rollnumber == null || rollnumber.length == 0 || !validRollNumber(rollnumber)) {
+    res.send({
+      error: true,
+      success: false,
+      errorMessage: "Roll number not specified!!"
+    });
+    return;
+  }
+  var allTransactions = [];
+  MongoClient.connect(url, function (err, db) {
+    if (err) {
+      res.send({
+        error: true,
+        success: false,
+        errorMessage: "database connection error"
+      });
+      throw err
+    };
+    var dbo = db.db("FeesBakya");
+    dbo.collection("fees_submission_details").find({
+      rollnumber: rollnumber
+    }, function (err, result) { //just fetch all students
+      if (err) {
+        res.send({
+          error: true,
+          success: false,
+          errorMessage: "Database connection error!!"
+        });
+        throw err;
+      }
+      for (let i = 0; i < result.length; i++) {
+        allTransactions.push({
+          transaction: result[i],
+          type: "fees submission"
+        });
+      }
+      dbo.collection("balance_credit_debit_details").find({
+        rollnumber: rollnumber
+      }, function (errr, resultt) { //just fetch all students
+        if (errr) {
+          res.send({
+            error: true,
+            success: false,
+            errorMessage: "Database connection error!!"
+          });
+          throw errr;
+        }
+        for (let i = 0; i < resultt.length; i++) {
+          allTransactions.push({
+            transaction: resultt[i],
+            type: "Balance added/deducted"
+          });
+        }
+        db.close();
+      });
+    });
+
+  });
 });
 //10. academic dates // no need for this api we dont need this dates
 // app.get('/academicStartDates/:class', (req, res) => {
@@ -1312,12 +1372,92 @@ app.get('/allTransaction/:rollNumber', (req, res) => {
 //   res.send("fetching all payments by " + req.query.rollnumber);
 // });
 //12. current fees rule for class X
-app.get('/currentFeesRule/:class', (req, res) => {
-  res.send("fetching current fees rule for " + req.query.class);
+app.get('/currentFeesRule/:classs', (req, res) => {
+  var classSpecified = req.query.classs;
+  if (classSpecified == undefined || classSpecified == null || classSpecified.length == 0 || !vaildClass(classSpecified)) {
+    res.send({
+      error: true,
+      success: false,
+      errorMesssage: "Class not specified!!"
+    });
+    return;
+  }
+  var feesRulesReq = [];
+  MongoClient.connect(url, function (err, db) {
+    if (err) {
+      res.send({
+        error: true,
+        success: false,
+        errorMessage: "database connection error"
+      });
+      throw err
+    };
+    var dbo = db.db("FeesBakya");
+    dbo.collection("fees_rules_details").find({
+      classs: classSpecified
+    }, function (err, result) {
+      if (err) {
+        res.send({
+          error: true,
+          success: false,
+          errorMessage: "DataBase connection error!!"
+        });
+        throw err;
+      }
+      for (let i = 0; i < result.length; i++) {
+        feesRulesReq.push(result[i]);
+      }
+
+      res.send({
+        success: true,
+        error: false,
+        successMessage: "found the class fees rules!!",
+        rules: feesRulesReq
+      });
+
+    });
+
+
+
+
+  });
 });
 //13. get all fees rules till now
 app.get('/allFeesRules', (req, res) => {
-  res.send("fetching all fees rules for all classes");
+  var allFeesRules = [];
+  MongoClient.connect(url, function (err, db) {
+    if (err) {
+      res.send({
+        error: true,
+        success: false,
+        errorMessage: "database connection error"
+      });
+      throw err
+    };
+    var dbo = db.db("FeesBakya");
+    dbo.collection("fees_rules_details").find({}, function (err, result) {
+      if (err) {
+        res.send({
+          error: true,
+          success: false,
+          errorMessage: "DataBBase connection error!!"
+        });
+        throw err;
+      }
+      for (let i = 0; i < result.length; i++) {
+        allFeesRules.push(result[i]);
+      }
+
+      res.send({
+        error: false,
+        success: true,
+        successMessage: "All Fees Rules Fetched!!",
+        allFeesRules: allFeesRules
+      });
+
+    });
+
+  });
 });
 //14 same as 10
 //X15. get all acadmeic dates all classes this api is not needed
@@ -1330,18 +1470,87 @@ app.get('/allFeesRules', (req, res) => {
 // });
 
 //this api to be used for passing a student
-app.post("/changeClassStudent",(req,res)=>{
-var studentDetails = req.body.studentDetails;
-// studentDetails contains {
+app.post("/changeClassStudent", (req, res) => {
+  var studentDetails = req.body.studentDetails;
+  // studentDetails contains {
   // student rollnumber 
   // student new class
-// }
+  // }
+  if (studentDetails.classs == null || studentDetails.classs == undefined || !vaildClass(studentDetails.classs) || studentDetails.classs.length == 0) {
+    res.send({
+      error: true,
+      success: false,
+      errorMessage: "New Class Not Defined!!"
+    });
+    return;
+  }
+  if (studentDetails.rollnumber == undefined || studentDetails.rollnumber == null || !validRollNumber(studentDetails.rollnumber) || studentDetails.rollnumber.length == 0) {
+    res.send({
+      error: true,
+      success: false,
+      errorMessage: "Roll number not defined!!"
+    });
+    return;
+  }
+  //first change in the student_details then in students_balance_sheet
+  MongoClient.connect(url, function (err, db) {
+    if (err) {
+      res.send({
+        error: true,
+        success: false,
+        errorMessage: "database connection error"
+      });
+      throw err
+    };
+    var dbo = db.db("FeesBakya");
+    dbo.collection("student_details").updateOne({
+      rollnumber: studentDetails.rollnumber
+    }, {
+      $set: {
+        classs: studentDetails.classs
+      }
+    }, function (err, result) {
+      if (err) {
+        res.send({
+          error: true,
+          success: false,
+          errorMessage: "DataBase Connection error!!"
+        });
+        throw err;
+      }
 
-//first change in the student_details then in students_balance_sheet
+      dbo.collection("students_balance_sheet").updateOne({
+        rollnumber: studentDetails.rollnumber
+      }, {
+        $set: {
+          classs: studentDetails.classs
+        },
+        function (er, re) {
+          if (er) {
+            res.send({
+              error: true,
+              success: false,
+              errorMessage: "Critical DataBase Connection error!!"
+            });
+            throw er;
+          }
+          res.send({
+            success: true,
+            error: false,
+            successMessage: "Students Class changed successfully!!"
+          });
+          db.close();
+        }
+      });
 
 
 
 
+    });
+
+
+
+  });
 });
 
 app.listen(port, () => console.log(`Listening on port ${port}`));
