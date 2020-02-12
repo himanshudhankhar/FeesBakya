@@ -9,6 +9,11 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
   extended: true
 }));
+app.use(function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  next();
+});
 // First demo apis for testing ..........................................................................
 app.get('/api/hello', (req, res) => {
   res.send({
@@ -45,7 +50,7 @@ app.post('/register_student', (req, res) => {
   //     image_url
   // }
   //here we have to send request to db to register student
-  var students_details = req.body.student_details;
+  var student_details = req.body.student_details;
   if (student_details == undefined) {
     res.send({
       success: false,
@@ -408,7 +413,7 @@ app.post('/add_fees_rule', (req, res) => {
   MongoClient.connect(url, function (err, db) {
     if (err) throw err;
     var dbo = db.db("FeesBakya");
-    var myquery = {
+    var myparams = {
       classs: feesRuleData.classs
     };
     var newvalues = {
@@ -417,7 +422,7 @@ app.post('/add_fees_rule', (req, res) => {
         endDate: feesRuleData.dateOfImplementation
       }
     };
-    dbo.collection("fees_rules_details").updateOne(myquery, newvalues, function (err, resp) {
+    dbo.collection("fees_rules_details").updateOne(myparams, newvalues, function (err, resp) {
       if (err) {
         res.send({
           error: true,
@@ -575,15 +580,16 @@ app.post('/removeStudentConfirmation', (req, res) => {
   MongoClient.connect(url, function (err, db) {
     if (err) throw err;
     var dbo = db.db("FeesBakya");
-    var myquery = {
+    var myparams = {
       rollnumber: removedStudentDetails.rollnumber
     };
     var newvalues = {
       $set: {
-        active: false
+        active: false,
+        dode:Date()
       }
     };
-    dbo.collection("student_details").updateOne(myquery, newvalues, function (err, resp) {
+    dbo.collection("student_details").updateOne(myparams, newvalues, function (err, resp) {
       if (err) {
         res.send({
           error: true,
@@ -598,7 +604,7 @@ app.post('/removeStudentConfirmation', (req, res) => {
         }
       }
       dbo.collection("students_balance_sheet").updateOne({
-        rollnumber: myquery.rollnumber
+        rollnumber: myparams.rollnumber
       }, newwValues, function (erorr, respp) {
         if (erorr) {
           res.send({
@@ -655,7 +661,7 @@ app.post('/add_new_academic_session', (req, res) => {
   MongoClient.connect(url, function (err, db) {
     if (err) throw err;
     var dbo = db.db("FeesBakya");
-    var myquery = {
+    var myparams = {
       classs: newAcadmeicSession.classs,
     };
     var newvalues = {
@@ -664,7 +670,7 @@ app.post('/add_new_academic_session', (req, res) => {
         endDate: newAcadmeicSession.startDate
       }
     };
-    dbo.collection("academic_sessions_increament_dates").updateOne(myquery, newvalues, function (err, resp) {
+    dbo.collection("academic_sessions_increament_dates").updateOne(myparams, newvalues, function (err, resp) {
       if (err) {
         res.send({
           error: true,
@@ -726,13 +732,13 @@ app.post('/modifyStudentDetails', (req, res) => {
   MongoClient.connect(url, function (err, db) {
     if (err) throw err;
     var dbo = db.db("FeesBakya");
-    var myquery = {
+    var myparams = {
       rollnumber: modifyStudentDetails.rollnumber
     };
     var newvalues = {
       $set: modifyStudentDetails
     };
-    dbo.collection("student_details").updateOne(myquery, newvalues, function (err, resp) {
+    dbo.collection("student_details").updateOne(myparams, newvalues, function (err, resp) {
 
       if (err) {
         res.send({
@@ -779,11 +785,11 @@ app.post('/deleteAddedFeesRule', (req, res) => {
   MongoClient.connect(url, function (err, db) {
     if (err) throw err;
     var dbo = db.db("FeesBakya");
-    var myquery = {
+    var myparams = {
       classs: deleteAddedFeesRule.classs,
       active: true
     };
-    dbo.collection("fees_rules_details").deleteOne(myquery, function (err, obj) {
+    dbo.collection("fees_rules_details").deleteOne(myparams, function (err, obj) {
       if (err) {
         res.send({
           error: true,
@@ -793,7 +799,7 @@ app.post('/deleteAddedFeesRule', (req, res) => {
         throw err;
       }
       console.log("active fees rule deleted");
-      var mquery = {
+      var mparams = {
         classs: deleteAddedFeesRule.classs,
         endDate: deleteAddedFeesRule.startDate
       }
@@ -803,7 +809,7 @@ app.post('/deleteAddedFeesRule', (req, res) => {
           active: true
         }
       }
-      dbo.collection("fees_rules_details").updateOne(mquery, newvalues, function (err, res) {
+      dbo.collection("fees_rules_details").updateOne(mparams, newvalues, function (err, res) {
         if (err) throw err;
         console.log("updated last fees rule");
         db.close();
@@ -838,11 +844,11 @@ app.post('/deleteAddedAcademicSessionRule', (req, res) => {
   MongoClient.connect(url, function (err, db) {
     if (err) throw err;
     var dbo = db.db("FeesBakya");
-    var myquery = {
+    var myparams = {
       classs: deleteAddedAcademicSessionRule.classs,
       active: true
     };
-    dbo.collection("academic_sessions_increament_dates").deleteOne(myquery, function (err, obj) {
+    dbo.collection("academic_sessions_increament_dates").deleteOne(myparams, function (err, obj) {
       if (err) {
         res.send({
           error: true,
@@ -852,7 +858,7 @@ app.post('/deleteAddedAcademicSessionRule', (req, res) => {
         throw err;
       }
       console.log("active session rule deleted");
-      var mquery = {
+      var mparams = {
         classs: deleteAddedAcademicSessionRule.classs,
         endDate: deleteAddedAcademicSessionRule.startDate
       }
@@ -862,7 +868,7 @@ app.post('/deleteAddedAcademicSessionRule', (req, res) => {
           active: true
         }
       }
-      dbo.collection("academic_sessions_increament_dates").updateOne(mquery, newvalues, function (err, res) {
+      dbo.collection("academic_sessions_increament_dates").updateOne(mparams, newvalues, function (err, res) {
         if (err) throw err;
         console.log("updated last session rule");
         db.close();
@@ -881,7 +887,7 @@ app.post('/deleteAddedAcademicSessionRule', (req, res) => {
 app.get('/isRollNumberAvailable/:rollnumber', (req, res) => {
   //use class_rollnumber_record
 
-  var rollnumber = req.query.rollnumber.toString();
+  var rollnumber = req.params.rollnumber.toString();
   //now check the  Se2016054
   if (rollnumber == undefined || rollnumber == null || !validRollNumber(rollnumber)) {
     res.send({
@@ -951,12 +957,12 @@ app.get('/isRollNumberAvailable/:rollnumber', (req, res) => {
   });
 
 
-  //res.send("maybe available"+req.query.rollnumber);
+  //res.send("maybe available"+req.params.rollnumber);
 
 });
 //2. get rollnumber for class z
 app.get('/getRollNumber/:classs', (req, res) => {
-  var classes = req.query.classs;
+  var classes = req.params.classs;
   if (classes == undefined || classes == null || classes.length == 0) {
     res.send({
       error: true,
@@ -1039,7 +1045,7 @@ app.get('/getRollNumber/:classs', (req, res) => {
             error: false,
             success: true,
             errorMessage: "",
-            successMessage: classes + Date().getYear() + numberr
+            successMessage: classes + Date().getFullYear() + numberr
           });
         }
       }
@@ -1050,7 +1056,8 @@ app.get('/getRollNumber/:classs', (req, res) => {
 });
 //3. total students year.
 app.get('/getTotalActiveStudentsFromYear/:year', (req, res) => {
-  var yr = req.query.year;
+  console.log((req.params));
+  var yr = req.params.year;
   if (yr == undefined || yr == null || yr.length == 0) {
     res.send({
       error: true,
@@ -1061,7 +1068,7 @@ app.get('/getTotalActiveStudentsFromYear/:year', (req, res) => {
   }
 
   // all active students with year in doe is smaller than year specified;
-  //db query for finding all the students who are active 
+  //db params for finding all the students who are active 
 
   MongoClient.connect(url, function (err, db) {
     if (err) {
@@ -1088,17 +1095,33 @@ app.get('/getTotalActiveStudentsFromYear/:year', (req, res) => {
       //it is assumed that some of the students will be active there
       var countTotalInYr = 0;
       for (let i = 0; i < result.length; i++) {
-        if (parseInt(Date(result[i].doe).getYear().toString()) <= parseInt(yr)) {
+        if (parseInt(Date(result[i].doe).getFullYear().toString()) <= parseInt(yr)) {
           countTotalInYr += 1;
         }
       }
-
-      res.send({
-        error: false,
-        success: true,
-        successMessage: countTotalInYr + " students are still active from this year!!"
-      });
-      db.close();
+      dbo.collection("student_details").find({active:false},function(err,reslt){
+        if (err) {
+          res.send({
+            error: true,
+            success: false,
+            errorMessage: "database error!!"
+          });
+          throw err;
+        }
+        for (let i = 0; i < reslt.length; i++) {
+          if (parseInt(Date(reslt[i].dode).getFullYear().toString()) >= parseInt(yr)) {
+            countTotalInYr += 1;
+          }
+        }
+        res.send({
+          error: false,
+          success: true,
+          successMessage: countTotalInYr + " students are still active from this year!!",
+          count:countTotalInYr
+        });
+        db.close();
+      })
+    
     });
   });
 
@@ -1106,11 +1129,11 @@ app.get('/getTotalActiveStudentsFromYear/:year', (req, res) => {
 });
 //4. total faculties in year.
 app.get('/getTotalFacultiesInYear/:year', (req, res) => {
-  res.send("fetching total faculties for year " + req.query.year);
+  res.send("fetching total faculties for year " + req.params.year);
 }); // will do it later
 //5. fees collected in year 
 app.get('/getFeesCollectedInYear/:year', (req, res) => {
-  var yr = req.query.year;
+  var yr = req.params.year;
   if (yr == undefined || yr == null || yr.length == 0) {
     res.send({
       error: true,
@@ -1143,7 +1166,7 @@ app.get('/getFeesCollectedInYear/:year', (req, res) => {
       //it is assumed that some of the students will be active there
       var countTotalInYr = 0;
       for (let i = 0; i < result.length; i++) {
-        if (parseInt(Date(result[i].paymentDate).getYear().toString()) == parseInt(yr)) {
+        if (parseInt(Date(result[i].paymentDate).getFullYear().toString()) == parseInt(yr)) {
           countTotalInYr += parseInt(result[i].feesAmount);
         }
       }
@@ -1162,9 +1185,9 @@ app.get('/getFeesCollectedInYear/:year', (req, res) => {
 //6. request cannot be full filled.
 //7. get student details
 app.get('/getStudentDetails/:rollNumber/:classs/:name', (req, res) => {
-  var rollnumber = req.query.rollnumber;
-  var classs = req.query.classs;
-  var name = req.query.name;
+  var rollnumber = req.params.rollnumber;
+  var classs = req.params.classs;
+  var name = req.params.name;
   if ((name == undefined || name == null || name.length == 0) || (rollnumber == undefined || rollnumber == null || rollnumber.length == 0 || !validRollNumber(rollnumber)) || (classs == undefined || classs == null || classs.length == 0)) {
     res.send({
       error: true,
@@ -1228,9 +1251,9 @@ app.get('/getStudentDetails/:rollNumber/:classs/:name', (req, res) => {
 });
 //8. get defaulters by name / roll number / class
 app.get('/getDefaultersDetails/:rollnumber/:classs/:name', (req, res) => {
-  var rollnumber = req.query.rollnumber;
-  var classs = req.query.classs;
-  var name = req.query.name;
+  var rollnumber = req.params.rollnumber;
+  var classs = req.params.classs;
+  var name = req.params.name;
   if ((name == undefined || name == null || name.length == 0) || (rollnumber == undefined || rollnumber == null || rollnumber.length == 0 || !validRollNumber(rollnumber)) || (classs == undefined || classs == null || classs.length == 0)) {
     res.send({
       error: true,
@@ -1303,7 +1326,7 @@ app.get('/getDefaultersDetails/:rollnumber/:classs/:name', (req, res) => {
 
 //9. all transactions by rollnumber includes paid as well deducted
 app.get('/allTransaction/:rollNumber', (req, res) => {
-  var rollnumber = req.query.rollNumber;
+  var rollnumber = req.params.rollNumber;
   if (rollnumber == undefined || rollnumber == null || rollnumber.length == 0 || !validRollNumber(rollnumber)) {
     res.send({
       error: true,
@@ -1365,15 +1388,15 @@ app.get('/allTransaction/:rollNumber', (req, res) => {
 });
 //10. academic dates // no need for this api we dont need this dates
 // app.get('/academicStartDates/:class', (req, res) => {
-//   res.send("fetching all dates for " + req.query.class);
+//   res.send("fetching all dates for " + req.params.class);
 // });
 //X11. get all payments by student X no need for this api just show all the transactions imposed on him
 // app.get('/allPaymentsByStudent/:rollNumber', (req, res) => {
-//   res.send("fetching all payments by " + req.query.rollnumber);
+//   res.send("fetching all payments by " + req.params.rollnumber);
 // });
 //12. current fees rule for class X
 app.get('/currentFeesRule/:classs', (req, res) => {
-  var classSpecified = req.query.classs;
+  var classSpecified = req.params.classs;
   if (classSpecified == undefined || classSpecified == null || classSpecified.length == 0 || !vaildClass(classSpecified)) {
     res.send({
       error: true,
@@ -1466,7 +1489,7 @@ app.get('/allFeesRules', (req, res) => {
 // });
 //X16 get all deductions of student //no need for this api just show the all transactions
 // app.get('/allDeductionsForStudent/:rollNumber', (req, res) => {
-//   res.send("fetching all deductions for " + req.query.rollnumber);
+//   res.send("fetching all deductions for " + req.params.rollnumber);
 // });
 
 //this api to be used for passing a student
