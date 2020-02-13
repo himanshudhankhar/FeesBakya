@@ -1,3 +1,7 @@
+///////////////////////////////////////////////////////////////////////////////////////////
+////Periodic service likhni baaki hai jo ki, balance sheet ko har mahine ki 1st tarik ko update kar de gi and add the deposit/balance and -ve amount to the account
+//////////////////////////////////////////////////////////////////////////////////////////
+/////Students_balance_sheet also contains active field if it is false means student is removed but still he has to pay the amount
 const express = require('express');
 const bodyParser = require('body-parser');
 var MongoClient = require('mongodb').MongoClient;
@@ -221,7 +225,7 @@ app.post('/register_student', (req, res) => {
         classs: student_details.classs,
         active: true
       }
-      dbo.collection("student_balance_sheet").insertOne(newBalanceHolder, function (errors, respp) {
+      dbo.collection("students_balance_sheet").insertOne(newBalanceHolder, function (errors, respp) {
         if (errors) {
           res.send({
             error: true,
@@ -909,7 +913,7 @@ app.get('/isRollNumberAvailable/:rollnumber', (req, res) => {
     'Fi': "Fifth",
     'Sx': "Sixth",
     'Sv': "Seventh",
-    "Eg": 'Eight',
+    "Eg": 'Eighth',
     'Nn': "Ninth",
     'Tn': "Tenth",
     'El': "Eleventh",
@@ -984,7 +988,7 @@ app.get('/getRollNumber/:classs', (req, res) => {
     'Fi': "Fifth",
     'Sx': "Sixth",
     'Sv': "Seventh",
-    "Eg": 'Eight',
+    "Eg": 'Eighth',
     'Nn': "Ninth",
     'Tn': "Tenth",
     'El': "Eleventh",
@@ -1635,7 +1639,9 @@ app.get('/getTotalFeesPayers', (req, res) => {
       throw err
     };
     var dbo = db.db("FeesBakya");
-    dbo.collection("students_balance_sheet").find({}, (errr, result) => {
+    dbo.collection("students_balance_sheet").find({
+      active: true
+    }, (errr, result) => {
       if (errr) {
         res.send({
           error: true,
@@ -1644,14 +1650,14 @@ app.get('/getTotalFeesPayers', (req, res) => {
         });
         throw errr;
       }
-      for(let i=0;i<result.length;i++){
-        feesPy+=1;
+      for (let i = 0; i < result.length; i++) {
+        feesPy += 1;
       }
       res.send({
         error: false,
         success: true,
         successMessage: "Total Fees Payers Counted!!",
-        totalFeesPayers:  feesPy
+        totalFeesPayers: feesPy
       });
       db.close();
     });
@@ -1659,5 +1665,139 @@ app.get('/getTotalFeesPayers', (req, res) => {
   });
 });
 
+app.get('/thisMonthFeesCollection', function (req, res) {
+  //from the fees collection database pick those submissions which have same month and same year
+  let currentDate = new Date();
+  let thisMonth = currentDate.getMonth();
+  let thisYear = currentDate.getFullYear();
+  let collectionAmount = 0;
+  MongoClient.connect(url, function (err, db) {
+    if (err) {
+      res.send({
+        error: true,
+        success: false,
+        errorMessage: "database connection error"
+      });
+      throw err
+    };
+    var dbo = db.db("FeesBakya");
+    dbo.collection("fees_submission_details").find({}, (errr, result) => {
+      if (errr) {
+        res.send({
+          error: true,
+          success: false,
+          errorMessage: "DataBase Connection Error!!"
+        });
+        throw errr;
+      }
+      for (let i = 0; i < result.length; i++) {
+        let feesSubmissionDate = Date(result[i].paymentDate);
+        if (feesSubmissionDate.getMonth() == thisMonth && feesSubmissionDate.getFullYear() == thisYear) {
+          collectionAmount += parseInt(result[i].feesAmount);
+        }
+      }
 
+      res.send({
+        error: false,
+        success: true,
+        successMessage: "Found Collection of this month",
+        collectionAmount: collectionAmount
+      });
+      db.close();
+    });
+  });
+
+});
+
+
+
+app.get('/estimatedFeesCollectionThisMonth', function (req, res) {
+  //for this go to the balancesheet check for all students , jo active hain balance sheet mein sirf unko hi 
+  let classVar = {
+    'LKG': 0,
+    'UKG': 0,
+    'First': 0,
+    'Second': 0,
+    'Third': 0,
+    'Fourth': 0,
+    'Fifth': 0,
+    'Sixth': 0,
+    'Seventh': 0,
+    'Eighth': 0,
+    'Ninth': 0,
+    'Tenth': 0,
+    'Eleventh': 0,
+    'Twelfth': 0
+  }
+  let finalValue = 0;
+  MongoClient.connect(url, function (err, db) {
+    if (err) {
+      res.send({
+        error: true,
+        success: false,
+        errorMessage: "database connection error"
+      });
+      throw err
+    };
+    var dbo = db.db("FeesBakya");
+    dbo.collection("students_balance_sheet").find({
+      active: true
+    }, (errr, result) => {
+      if (errr) {
+        res.send({
+          error: true,
+          success: false,
+          errorMessage: "DataBase Connection Error!!"
+        });
+        throw errr;
+      }
+      for (let i = 0; i < result.length; i++) {
+        classVar[result[i].classs] += 1;
+      }
+      //make one more db request to fees_rules and find out the actual active fees rules for each class
+
+      MongoClient.connect(url, function (err, db) {
+        if (err) {
+          res.send({
+            error: true,
+            success: false,
+            errorMessage: "database connection error"
+          });
+          throw err
+        };
+        var dbo = db.db("FeesBakya");
+        dbo.collection("fees_rules_details").find({
+          active: true
+        }, (errror, resultt) => {
+          if (errror) {
+            res.send({
+              error: true,
+              success: false,
+              errorMessage: "database connection error"
+            });
+            throw errror;
+          }
+          for (let i = 0; i < resultt.length; i++) {
+            let value = parseInt(resultt[i].feesAmount);
+            finalValue += value * classVar[resultt[i].classs];
+          }
+
+          res.send({
+            error: false,
+            success: true,
+            successMessage: "Found total fees to be collected!!",
+            feesToBeCollected: finalValue
+          });
+          db.close();
+
+        });
+      });
+
+
+    })
+  });
+
+
+
+});
 app.listen(port, () => console.log(`Listening on port ${port}`));

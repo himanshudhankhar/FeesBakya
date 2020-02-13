@@ -1,14 +1,75 @@
 import React from 'react';
+import axios from 'axios';
 
 import Card from '@material-ui/core/Card';
 import Typography from '@material-ui/core/Typography';
 import SvgIcon from '@material-ui/core/SvgIcon';
+
+function abs(aaa){
+    if(aaa>=0){
+        return aaa;
+    }else{
+        return -aaa;
+    }
+}
+
+
+let urlThisMonthCollection="http://localhost:5000/thisMonthFeesCollection";
+let urlEstimatedCollection="http://localhost:5000/estimatedFeesCollectionThisMonth";
 export default class FeesCollectionCard extends React.Component{
+constructor(props){
+    super(props);
+    this.state={
+        thisMonthCollection:0,
+        estimationCollection:0,
+        fraction:0,
+    }
+    this.updateCard = this.updateCard.bind(this);
+}
+
+updateCard(){
+    let self = this;
+    axios.get(urlThisMonthCollection).then(function(response){
+let collectedAmount = parseInt(response.data.collectionAmount);
+axios.get(urlEstimatedCollection).then(function(responsee){
+    let estimatedCollection  = parseInt(responsee.data.feesToBeCollected);
+    self.setState({
+        thisMonthCollection:collectedAmount,
+        estimatedCollection:estimatedCollection,
+        fraction:parseInt((collectedAmount)/(estimatedCollection+1))
+    });
+        }).catch(function(error){
+    console.log(error);
+        });
+    }).catch(function(error){
+console.log(error);
+    });
+}
+componentDidMount(){
+    let self = this;
+    axios.get(urlThisMonthCollection).then(function(response){
+let collectedAmount = parseInt(response.data.collectionAmount);
+axios.get(urlEstimatedCollection).then(function(responsee){
+    let estimatedCollection  = parseInt(responsee.data.feesToBeCollected);
+    self.setState({
+        thisMonthCollection:collectedAmount,
+        estimatedCollection:estimatedCollection,
+        fraction:parseInt((collectedAmount)/(estimatedCollection+1))
+    });
+        }).catch(function(error){
+    console.log(error);
+        });
+    }).catch(function(error){
+console.log(error);
+    });
+}
+
+
     render(){
         return (
             
 
-<Card  style={{minWidth:300,maxWidth:400,textAlign:"center",margin:5}}>
+<Card  style={{minWidth:300,maxWidth:400,textAlign:"center",margin:5}} onClick={this.updateCard}>
                 <div style={{padding:10}}>
             <Typography component="h5" variant="h5">
             Fees Collection
@@ -16,17 +77,17 @@ export default class FeesCollectionCard extends React.Component{
 
 <div style={{display:"flex",flexDirection:"column",padding:5}}>
    <div style={{display:"flex",flexDirection:"row" ,alignItems:"center"}}>
-    <h4>This Month cltd</h4>
-    <div style={{marginLeft:10,color:"green"}}><b>Rs. 50000</b></div>
+    <h4>This Month Cltn:</h4>
+        <div style={{marginLeft:10,color:"green"}}><b>Rs.{this.state.thisMonthCollection}</b></div>
     </div>
     <div style={{display:"flex",flexDirection:"row"  ,alignItems:"center"}}>
-    <h4>Last Month</h4>
-    <div style={{marginLeft:50,color:"green"}}><b>Rs. 40000</b></div>
+    <h4>Estimated Cltn:</h4>
+        <div style={{marginLeft:20,color:"green"}}><b>Rs.{this.state.estimationCollection}</b></div>
     </div>
 <div style={{display:"flex",flexDirection:"row",alignItems:"center",justifyContent:"center"}}>
-    <div style={{color:"green"}}><b>25%</b></div>
-<SvgIcon style={{color:"green"}}>
-<path d="M7 14l5-5 5 5z"/><path d="M0 0h24v24H0z" fill="none"/></SvgIcon>
+        <div style={{color:"green"}}><b>{this.state.fraction}%</b></div>
+{/* <SvgIcon style={{color:"green"}}>
+<path d="M7 14l5-5 5 5z"/><path d="M0 0h24v24H0z" fill="none"/></SvgIcon> */}
 
 </div>
 </div>
