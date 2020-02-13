@@ -9,7 +9,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
   extended: true
 }));
-app.use(function(req, res, next) {
+app.use(function (req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
   next();
@@ -586,7 +586,7 @@ app.post('/removeStudentConfirmation', (req, res) => {
     var newvalues = {
       $set: {
         active: false,
-        dode:Date()
+        dode: Date()
       }
     };
     dbo.collection("student_details").updateOne(myparams, newvalues, function (err, resp) {
@@ -1099,7 +1099,9 @@ app.get('/getTotalActiveStudentsFromYear/:year', (req, res) => {
           countTotalInYr += 1;
         }
       }
-      dbo.collection("student_details").find({active:false},function(err,reslt){
+      dbo.collection("student_details").find({
+        active: false
+      }, function (err, reslt) {
         if (err) {
           res.send({
             error: true,
@@ -1117,11 +1119,11 @@ app.get('/getTotalActiveStudentsFromYear/:year', (req, res) => {
           error: false,
           success: true,
           successMessage: countTotalInYr + " students are still active from this year!!",
-          count:countTotalInYr
+          count: countTotalInYr
         });
         db.close();
       })
-    
+
     });
   });
 
@@ -1575,5 +1577,87 @@ app.post("/changeClassStudent", (req, res) => {
 
   });
 });
+
+
+app.get('/getTotalDefaulters', (req, res) => {
+
+  //make a mongoconnection 
+  let defaultersTotal = 0;
+  MongoClient.connect(url, function (err, db) {
+    if (err) {
+      res.send({
+        error: true,
+        success: false,
+        errorMessage: "database connection error"
+      });
+      throw err
+    };
+    var dbo = db.db("FeesBakya");
+    dbo.collection("students_balance_sheet").find({}, (errr, result) => {
+      if (errr) {
+        res.send({
+          error: true,
+          success: false,
+          errorMessage: "DataBase Error!!"
+        });
+        throw errr;
+      }
+      for (let i = 0; i < result.length; i++) {
+        if (parseInt(result[i].amountTotal) < 0) {
+          defaultersTotal += 1;
+        }
+      }
+      res.send({
+        error: false,
+        success: true,
+        successMessage: "Total Defaulters Counted!!",
+        defaultersCount: defaultersTotal
+      });
+      db.close();
+    });
+
+  });
+});
+
+
+
+app.get('/getTotalFeesPayers', (req, res) => {
+
+  //make a mongoconnection 
+  let feesPy = 0;
+  MongoClient.connect(url, function (err, db) {
+    if (err) {
+      res.send({
+        error: true,
+        success: false,
+        errorMessage: "database connection error"
+      });
+      throw err
+    };
+    var dbo = db.db("FeesBakya");
+    dbo.collection("students_balance_sheet").find({}, (errr, result) => {
+      if (errr) {
+        res.send({
+          error: true,
+          success: false,
+          errorMessage: "DataBase Error!!"
+        });
+        throw errr;
+      }
+      for(let i=0;i<result.length;i++){
+        feesPy+=1;
+      }
+      res.send({
+        error: false,
+        success: true,
+        successMessage: "Total Fees Payers Counted!!",
+        totalFeesPayers:  feesPy
+      });
+      db.close();
+    });
+
+  });
+});
+
 
 app.listen(port, () => console.log(`Listening on port ${port}`));

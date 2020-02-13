@@ -2,13 +2,86 @@ import React from 'react';
 import Card from '@material-ui/core/Card';
 import Typography from '@material-ui/core/Typography';
 import SvgIcon from '@material-ui/core/SvgIcon';
+import axios from 'axios';
+let urlTotalDefaulters="http://localhost:5000/getTotalDefaulters";
+let urlTotalFeesPayers="http://localhost:5000/getTotalFeesPayers";
 
 export default class FeesDefaultersCard extends React.Component{
+constructor(props){
+    super(props);
+    this.state={
+        defaulters:0,
+        tStudents:0,
+        fraction:0
+    }
+    this.updateCard=this.updateCard.bind(this);
+
+}
+
+updateCard(){
+    var  self=this;
+     var totalDefaulters=0;
+     var totalFeesPayers=0;
+    axios.get(urlTotalDefaulters)
+    .then(function (response) {
+        
+        totalDefaulters = response.data.defaultersCount;
+        axios.get(urlTotalFeesPayers)
+        .then(function (responses) {
+            totalFeesPayers = responses.data.totalFeesPayers;
+    self.setState({
+        defaulters:totalDefaulters,
+        tStudents:totalFeesPayers,
+        fraction :parseInt((totalDefaulters)/(totalFeesPayers+1))
+    });
+            
+    
+        }).catch(function(eror){
+            console.log(eror);
+        });
+
+
+    }).catch(function(eror){
+        console.log(eror);
+    });
+}
+
+
+
+componentDidMount(){
+    //make axios request for total defaulters and total students eligible for fees payment
+     var  self=this;
+     var totalDefaulters=0;
+     var totalFeesPayers=0;
+    axios.get(urlTotalDefaulters)
+    .then(function (response) {
+        totalDefaulters = response.data.defaultersCount;
+        axios.get(urlTotalFeesPayers)
+        .then(function (responses) {
+            totalFeesPayers = responses.data.totalFeesPayers;
+    self.setState({
+        defaulters:totalDefaulters,
+        tStudents:totalFeesPayers,
+        fraction :parseInt((totalDefaulters)/(totalFeesPayers+1))
+    });
+            
+    
+        }).catch(function(eror){
+            console.log(eror);
+        });
+
+
+    }).catch(function(eror){
+        console.log(eror);
+    });
+}
+
+
     render(){
         return(
             
 
-<Card  style={{minWidth:300,maxWidth:400,textAlign:"center",margin:5}}>
+<Card  style={{minWidth:300,maxWidth:400,textAlign:"center",margin:5}} onClick={this.updateCard}>
                 <div style={{padding:10}}>
             <Typography component="h5" variant="h5">
             Fees Defaulters
@@ -16,17 +89,17 @@ export default class FeesDefaultersCard extends React.Component{
 
 <div style={{display:"flex",flexDirection:"column",padding:5}}>
    <div style={{display:"flex",flexDirection:"row" ,alignItems:"center"}}>
-    <h4>This Month dflts</h4>
-    <div style={{marginLeft:10,color:"green"}}><b>40</b></div>
+    <h4>Total Defaulters:</h4>
+    <div style={{marginLeft:10,color:"green"}}><b>{this.state.defaulters}</b></div>
     </div>
     <div style={{display:"flex",flexDirection:"row"  ,alignItems:"center"}}>
-    <h4>Last Month</h4>
-    <div style={{marginLeft:50,color:"green"}}><b>50</b></div>
+    <h4>Total Students:</h4>
+        <div style={{marginLeft:20,color:"green"}}><b>{this.state.tStudents}</b></div>
     </div>
 <div style={{display:"flex",flexDirection:"row",alignItems:"center",justifyContent:"center"}}>
-    <div style={{color:"green"}}><b>20%</b></div>
-<SvgIcon style={{color:"green"}}>
-<path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></SvgIcon>
+        <div style={{color:"green"}}><b>{this.state.fraction}%</b></div>
+{/* <SvgIcon style={{color:"green"}}>
+<path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></SvgIcon> */}
 
 </div>
 </div>
