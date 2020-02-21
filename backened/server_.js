@@ -7,8 +7,10 @@ const bodyParser = require('body-parser');
 var MongoClient = require('mongodb').MongoClient;
 var url = "mongodb://localhost:27017/";
 const app = express();
+var series = require('async/series');
+var async = require('async');
 const port = process.env.PORT || 5000;
-
+var validator = require('aadhaar-validator')
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
   extended: true
@@ -18,6 +20,123 @@ app.use(function (req, res, next) {
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
   next();
 });
+
+
+
+
+
+
+
+function updateClassRollNumberRecordByOne(classs) {
+  MongoClient.connect(url, function (err, db) {
+    if (err) throw err;
+    var dbo = db.db("FeesBakya");
+    dbo.collection("class_rollnumber_record").updateOne({
+      "classs": classs
+    }, {
+      $inc: {
+        availableRollnumber: 1
+      }
+    }, function (err, resp) {
+      if (err) {
+        throw err;
+      }
+      dbo.close();
+    });
+  });
+}
+
+
+
+
+
+
+
+function validRollNumber(rollnumber) {
+
+  //first 2 characters  must be from a set
+  //next 4 characters must be a  means must be a number'
+  // next 3 characters must be a number
+  if (rollnumber == undefined || rollnumber == null) {
+    return false;
+  }
+  rollnumber = rollnumber.toString().trim();
+  if (rollnumber.length < 9) {
+    return false;
+  }
+  let classs = rollnumber.substr(0, 2);
+  let year = rollnumber.substr(2, 4);
+  let strength = rollnumber.substr(6, 3);
+
+  var classes = new Set([
+    'Nr',
+    'Lk',
+    'Uk',
+    'Fi',
+    'Se',
+    'Th',
+    'Fu',
+    'Fi',
+    'Sx',
+    'Sv',
+    "Eg",
+    'Nn',
+    'Tn',
+    'El',
+    "Tw"
+  ]);
+  if (!classes.has((classs))) {
+    console.log("False rollnumber");
+    return false;
+  }
+  var classess = {
+    'Nr': "Nursery",
+    'Lk': "LKG",
+    'Uk': "UKG",
+    'Fi': 'First',
+    'Se': 'Second',
+    'Th': "Third",
+    'Fu': 'Fourth',
+    'Fi': "Fifth",
+    'Sx': "Sixth",
+    'Sv': "Seventh",
+    "Eg": 'Eighth',
+    'Nn': "Ninth",
+    'Tn': "Tenth",
+    'El': "Eleventh",
+    "Tw": "Twelfth"
+  }
+
+  var numbers = /^[0-9]+$/;
+  if (!year.match(numbers)) {
+    return false;
+  } else if (parseInt(year) > new Date().getFullYear() || parseInt(year) < 1900) {
+    return false;
+  }
+  if (!strength.match(numbers)) {
+    return false;
+  }
+  console.log("Bhai shab rollnumber sahi hai!!")
+  //now check whether that number is valid for that class or not
+  return true;
+  //assumend that the rollnumber regex matches here.
+
+}
+
+function validMobile(inputtxt) {
+  var phoneno = /^\d{10}$/;
+  if (inputtxt.match(phoneno)) {
+    return true;
+  } else {
+    return false;
+  }
+
+}
+
+function validAadhar(aadhaarNumber) {
+  return validator.isValidNumber(aadhaarNumber);
+}
+
 // First demo apis for testing ..........................................................................
 app.get('/api/hello', (req, res) => {
   res.send({
@@ -35,7 +154,7 @@ app.post('/api/world', (req, res) => {
 // All important Post requests .............................................................................
 //1. register student
 app.post('/register_student', (req, res) => {
-  console.log(req.body.student_details);
+  console.log(req.body);
   // student_details must include{
   //     student_name,
   //     fathers_name,
@@ -54,7 +173,7 @@ app.post('/register_student', (req, res) => {
   //     image_url
   // }
   //here we have to send request to db to register student
-  var student_details = req.body.student_details;
+  var student_details = req.body;
   if (student_details == undefined) {
     res.send({
       success: false,
@@ -153,7 +272,7 @@ app.post('/register_student', (req, res) => {
     return;
   }
 
-  if (student_details.mobile == undefined || student_details.mobile == null || student_details.mobile.length == 0) {
+  if (student_details.mobileNumber == undefined || student_details.mobileNumber == null || student_details.mobileNumber.length == 0) {
     res.send({
       success: false,
       error: true,
@@ -161,7 +280,7 @@ app.post('/register_student', (req, res) => {
     });
     return;
   }
-  if (!validMobile(student_details.mobile)) {
+  if (!validMobile(student_details.mobileNumber)) {
     res.send({
       success: false,
       error: true,
@@ -198,55 +317,130 @@ app.post('/register_student', (req, res) => {
     res.send({
       success: false,
       error: true,
-      errorMesage: "roll number not valid"
+      errorMessage: "roll number not valid"
+    });
+    return;
+  }
+  var classess = {
+    'Nr': "Nursery",
+    'Lk': "LKG",
+    'Uk': "UKG",
+    'Fi': 'First',
+    'Se': 'Second',
+    'Th': "Third",
+    'Fu': 'Fourth',
+    'Fi': "Fifth",
+    'Sx': "Sixth",
+    'Sv': "Seventh",
+    "Eg": 'Eighth',
+    'Nn': "Ninth",
+    'Tn': "Tenth",
+    'El': "Eleventh",
+    "Tw": "Twelfth"
+  }
+  if (classess[student_details.rollnumber.substr(0, 2)] == student_details.classs) {
+    console.log("sahi class hai rollnumber k hisab se!!");
+  } else {
+    res.send({
+      error: true,
+      success: false,
+      errorMessage: "Rollnumber and class at time of registration doesn't match!!"
     });
     return;
   }
   //here we have to send entry to db
   student_details['active'] = true;
-  MongoClient.connect(url, function (err, db) {
-    if (err) throw err;
-    var dbo = db.db("FeesBakya");
-    var myobj = student_details;
-    dbo.collection("student_details").insertOne(myobj, function (err, resp) {
+  async.series([
+
+      function (callback) {
+        //here check if that rollnumber exists or not in database
+        MongoClient.connect(url, function (err, db) {
+          if (err) throw err;
+          var dbo = db.db("FeesBakya");
+          var rollNumber = student_details.rollnumber;
+          dbo.collection("student_details").findOne({
+            "rollnumber": rollNumber
+          }, function (errors, results) {
+            if (errors) {
+              res.send({
+                error: true,
+                success: false,
+                errorMessage: "Error SomeWhere in DataBase"
+              });
+              throw errors;
+            }
+            console.log("Results for findings", results);
+            if (results == null) {
+              callback(null, true);
+            } else {
+              callback(null, false);
+            }
+            db.close();
+          })
+        });
+      }
+    ],
+    function (err, results) {
       if (err) {
         res.send({
-          error: true,
           success: false,
-          errorMessage: "DataBase Error"
+          error: true,
+          errorMessage: "SomeWhere in database there is an error!!"
         });
         throw err;
       }
 
-      console.log("student registerd"); //add 0 balance to the balaance sheet as well
-      var newBalanceHolder = {
-        rollnumber: student_details.rollnumber,
-        amountTotal: 0,
-        classs: student_details.classs,
-        active: true
-      }
-      dbo.collection("students_balance_sheet").insertOne(newBalanceHolder, function (errors, respp) {
-        if (errors) {
-          res.send({
-            error: true,
-            success: false,
-            errorMessage: "Critical Database Error"
-          });
-          throw errors;
-        }
-        res.end({
-          success: true,
-          error: false,
-          successMessage: "Student Added to registery as well as BalanceSheet"
+      if (results[0] == false) {
+        console.log(results[0]);
+        res.send({
+          error: true,
+          success: false,
+          errorMessage: "Rollnumber already exists in databse!!"
         });
-        db.close();
+        return;
+      }
+      MongoClient.connect(url, function (err, db) {
+        if (err) throw err;
+        var dbo = db.db("FeesBakya");
+        var myobj = student_details;
+        dbo.collection("student_details").insertOne(myobj, function (err, resp) {
+          if (err) {
+            res.send({
+              error: true,
+              success: false,
+              errorMessage: "DataBase Error"
+            });
+            throw err;
+          }
+
+          console.log("student registerd"); //add 0 balance to the balaance sheet as well
+          var newBalanceHolder = {
+            rollnumber: student_details.rollnumber,
+            amountTotal: 0,
+            classs: student_details.classs,
+            active: true
+          }
+          dbo.collection("students_balance_sheet").insertOne(newBalanceHolder, function (errors, respp) {
+            if (errors) {
+              res.send({
+                error: true,
+                success: false,
+                errorMessage: "Critical Database Error"
+              });
+              throw errors;
+            }
+            res.send({
+              success: true,
+              error: false,
+              successMessage: "Student Added to registery as well as BalanceSheet"
+            });
+            updateClassRollNumberRecordByOne(student_details.classs);
+            db.close();
+          });
+        });
       });
 
-
-
-
     });
-  });
   ///db part done
 
 });
@@ -290,6 +484,7 @@ app.post('/confirm_fees_deposit', (req, res) => {
     return;
   }
   // add payment to db
+
   MongoClient.connect(url, function (err, db) {
     if (err) throw err;
     var dbo = db.db("FeesBakya");
@@ -904,6 +1099,7 @@ app.get('/isRollNumberAvailable/:rollnumber', (req, res) => {
 
   var askedNumbering = parseInt(rollnumber.substring(6, 9));
   var classes = {
+    'Nr': "Nursery",
     'Lk': "LKG",
     'Uk': "UKG",
     'Fi': 'First',
@@ -965,7 +1161,7 @@ app.get('/isRollNumberAvailable/:rollnumber', (req, res) => {
 
 });
 //2. get rollnumber for class z
-app.get('/getRollNumber/:classs', (req, res) => {
+app.get('/getRollNumber/:classs/:year(\\d+)/', (req, res) => {
   var classes = req.params.classs;
   if (classes == undefined || classes == null || classes.length == 0) {
     res.send({
@@ -976,9 +1172,19 @@ app.get('/getRollNumber/:classs', (req, res) => {
     return;
   }
 
+  var year = parseInt(req.params.year);
+  if (year == undefined || year == null || year > new Date().getFullYear() || year < 2000) {
+    res.send({
+      error: true,
+      success: false,
+      errorMessage: "Invalid year of enrollment!!"
+    });
+    return;
+  }
 
 
   var classess = {
+    'Nr': 'Nursery',
     'Lk': "LKG",
     'Uk': "UKG",
     'Fi': 'First',
@@ -993,6 +1199,31 @@ app.get('/getRollNumber/:classs', (req, res) => {
     'Tn': "Tenth",
     'El': "Eleventh",
     "Tw": "Twelfth"
+  }
+  var classSet = new Set([
+    'Nr',
+    'Lk',
+    'Uk',
+    'Fi',
+    'Se',
+    'Th',
+    'Fu',
+    'Fi',
+    'Sx',
+    'Sv',
+    "Eg",
+    'Nn',
+    'Tn',
+    'El',
+    "Tw"
+  ])
+  if (!classSet.has(classes)) {
+    res.send({
+      error: true,
+      errorMessage: "Invalid Class Specified!!",
+      success: false
+    });
+    return;
   }
   var varr = classess[classes];
 
@@ -1042,14 +1273,16 @@ app.get('/getRollNumber/:classs', (req, res) => {
           });
         } else {
           var num = parseInt(numberr);
-          if (num < 100) {
+          if (num < 100 && num >= 10) {
             numberr = '0' + numberr.toString();
+          } else if (num < 10) {
+            numberr = '00' + numberr.toString();
           }
           res.send({
             error: false,
             success: true,
             errorMessage: "",
-            successMessage: classes + Date().getFullYear() + numberr
+            successMessage: classes + year + numberr
           });
         }
       }
@@ -1714,6 +1947,7 @@ app.get('/thisMonthFeesCollection', function (req, res) {
 app.get('/estimatedFeesCollectionThisMonth', function (req, res) {
   //for this go to the balancesheet check for all students , jo active hain balance sheet mein sirf unko hi 
   let classVar = {
+    'Nursery': 0,
     'LKG': 0,
     'UKG': 0,
     'First': 0,

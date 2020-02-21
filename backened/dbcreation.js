@@ -12,6 +12,10 @@ const client = new MongoClient(url);
 
 // Use connect method to connect to the Server
 client.connect(function(err) {
+  if(err){
+    console.log(err);
+    throw err;
+  }
   assert.equal(null, err);
   console.log("Connected successfully to server");
 
@@ -22,16 +26,16 @@ client.connect(function(err) {
                 return;
             }
             console.log("student table created",collectn.collectionName);
-            client.close();
-    });
- 
-});
+            
+    client.close();
+          });
+
+   });
 
 
 client.connect(function(err) {
   assert.equal(null, err);
   console.log("Connected successfully to server");
-
   const db = client.db("FeesBakya");
     db.createCollection("fees_submission_details",function(error,collectn){
             if(error){
@@ -41,7 +45,6 @@ client.connect(function(err) {
             console.log("fees submission table created",collectn.collectionName);
             client.close();
     });
- 
 });
 
 
@@ -90,6 +93,59 @@ client.connect(function(err) {
                 console.log(error);
                 return;
             }
+            collectn.insertMany([
+            {
+              classs:"Nursery",
+              availableRollnumber:1
+            },
+            {
+              classs:"First",
+              availableRollnumber:1
+            },
+            {
+              classs:"Second",
+              availableRollnumber:1
+            },
+            {
+              classs:"Third",
+              availableRollnumber:1
+            },{
+              classs:"Fourth",
+              availableRollnumber:1
+            },{
+              classs:"Fifth",
+              availableRollnumber:1
+            },{
+              classs:"Sixth",
+              availableRollnumber:1
+            },{
+              classs:"Seventh",
+              availableRollnumber:1
+            },{
+              classs:"Eighth",
+              availableRollnumber:1
+            },{
+              classs:"Ninth",
+              availableRollnumber:1
+            },{
+              classs:"Tenth",
+              availableRollnumber:1
+            },{
+              classs:"Eleventh",
+              availableRollnumber:1
+            },
+            {
+              classs:"Twelfth",
+              availableRollnumber:1
+            }
+          
+          
+          ],function(rer,res){
+            if(rer){
+              throw rer;
+            }
+
+          })
             console.log("class_rollnumber_record table constructed",collectn.collectionName);
             client.close();
     });
@@ -129,5 +185,4 @@ client.connect(function(err) {
  
 });
 
-
- client.off();
+ 

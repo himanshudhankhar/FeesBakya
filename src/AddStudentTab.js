@@ -3,13 +3,20 @@ import './stylesAdded.css';
 import Button from '@material-ui/core/Button';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-export default class AddStudentTab extends React.Component{
-
+import axios from "axios";
+import CircularProgress from '@material-ui/core/CircularProgress';
+import SuccessDialog from './SuccessDialog';
+import ErrorDialog from './ErrorDialog';
+import windowSize from 'react-window-size';
+class AddStudentTab extends React.Component{
+ registerStudentUrl = "http://localhost:5000/register_student";
 constructor(props){
     super(props);
     this.state={
-dob:Date.now(),
-startDate:Date.now(),
+      progress:false,
+dob:new Date(),
+startDate:new Date(),
+doe:new Date(),
 fullname:"",
 fathersname:"",
 mothersname:"",
@@ -23,24 +30,155 @@ face:"",
 rollnumber:"",
 standard:"",
 address:"",
-    }
+successDialog:false,
+errorDialog:false,
+successMessage:"",
+errorMessage:""
+     }
     this.handleSubmitButton=this.handleSubmitButton.bind(this);
     this.handleFileUpload=this.handleFileUpload.bind(this);
     this.handleDobChange=this.handleDobChange.bind(this);
     this.handleSubmitButton=this.handleSubmitButton.bind(this);
     this.handleChangeDob=this.handleChangeDob.bind(this);
     this.handleChangeDoe=this.handleChangeDoe.bind(this);
+    this.closeSuccessDialog=this.closeSuccessDialog.bind(this);
+    this.closeErrorDialog=this.closeErrorDialog.bind(this);
 }
+
+closeSuccessDialog(){
+  this.setState({
+    successDialog:false,
+    errorDialog:false,
+    successMessage:"",
+    errorMessage:"",
+    progress:false,
+    dob:new Date(),
+    startDate:new Date(),
+    doe:new Date(),
+    fullname:"",
+    fathersname:"",
+    mothersname:"",
+    village:"",
+    district:"",
+    sAadhar:"",
+    fAadhar:"",
+    mobileNumber:"",
+    doe:Date.now(),
+    face:"",
+    rollnumber:"",
+    standard:"",
+    address:""
+  });
+   document.getElementById("fullname").value="";
+    document.getElementById("fathersname").value="";
+  document.getElementById("mothersname").value="";
+   document.getElementById("class").value="";
+  document.getElementById("address").value="";
+   document.getElementById("sAadhar").value="";
+    document.getElementById("fAadhar").value="";
+    document.getElementById("mobileNumber").value="";
+   document.getElementById("Village").value="";
+    document.getElementById("district").value="";
+   document.getElementById("gender").value="";
+   document.getElementById("rollnumber").value="";
+   document.getElementById("face").value="";
+  
+}
+
+
+closeErrorDialog(){
+  this.setState({
+    successDialog:false,
+    errorDialog:false,
+    successMessage:"",
+    errorMessage:"",
+    progress:false,
+    dob:new Date(),
+    startDate:new Date(),
+    doe:new Date(),
+    fullname:"",
+    fathersname:"",
+    mothersname:"",
+    village:"",
+    district:"",
+    sAadhar:"",
+    fAadhar:"",
+    mobileNumber:"",
+    doe:Date.now(),
+    face:"",
+    rollnumber:"",
+    standard:"",
+    address:""
+  });
+  //  document.getElementById("fullname").value="";
+  //   document.getElementById("fathersname").value="";
+  // document.getElementById("mothersname").value="";
+  //  document.getElementById("class").value="";
+  // document.getElementById("address").value="";
+  //  document.getElementById("sAadhar").value="";
+  //   document.getElementById("fAadhar").value="";
+  //   document.getElementById("mobileNumber").value="";
+  //  document.getElementById("Village").value="";
+  //   document.getElementById("district").value="";
+  //  document.getElementById("gender").value="";
+  //  document.getElementById("rollnumber").value="";
+  //  document.getElementById("face").value="";
+  
+}
+
+askRollnumberComplete(){
+  let classs = document.getElementById('class').value;
+  let dated = this.state.doe;
+  this.askRollnumber(classs,dated);
+}
+
+
+askRollnumber(classs,date){
+
+  var classess = {
+    'Nursery':'Nr',
+     "LKG":'Lk',
+     "UKG":'Uk',
+    'First':'Fi',
+    'Second':'Se',
+    "Third":'Th',
+    'Fourth':'Fu',
+    "Fifth":'Fi',
+   "Sixth": 'Sx',
+    "Seventh":'Sv',
+     'Eighth':"Eg",
+    "Ninth":'Nn',
+    "Tenth":'Tn',
+    "Eleventh":'El',
+    "Twelfth":"Tw"
+  }
+  axios.get('http://localhost:5000/getRollNumber/'+classess[classs]+"/"+new Date(date).getFullYear()+"/").then((resp)=>{
+  console.log(resp.data.successMessage);
+  document.getElementById("rollnumber").value = resp.data.successMessage;
+  }).catch(err=>{
+    console.log(err);
+  })
+}
+
+
+
 handleChangeDoe(date){
 this.setState({
     doe:date
-})
+});
+
+if(document.getElementById('class').value!==null || document.getElementById('class').value!==undefined){
+  //fetch from the backened about the rollnumber and paste it
+  let classs = document.getElementById('class').value;
+ this.askRollnumber(classs,date);
+}
 }
 
 handleChangeDob(date){
     this.setState({
         dob:date
     })
+    this.askRollnumberComplete();
 }
 handleChange = date => {
     this.setState({
@@ -51,7 +189,8 @@ handleDobChange(event){
     console.log(event.target.value);
     this.setState({
         dob:event.target.value
-    })
+    });
+    this.askRollnumberComplete();
 }
 
 handleFileUpload(event){
@@ -61,6 +200,7 @@ handleFileUpload(event){
     })
 }
 handleSubmitButton(){
+ this.askRollnumberComplete();
     // 14 inputs required
     let fullname = document.getElementById("fullname").value;
     let fathersname = document.getElementById("fathersname").value;
@@ -145,20 +285,26 @@ if(district==undefined||district==null||district==""||district.length==0){
 }else{
     district = district.trim();
 }
-// if(this.state.dob==null||this.state.dob==undefined||this.state.dob==""||this.state.dob.length==0){
-//     alert("Enter Date Of Birth");
-//     console.log(document.getElementById("dob").value);
-//     return;
-// }else{
-//     dob=dob.trim();
-// }
+if(this.state.dob==null||this.state.dob==undefined||this.state.dob==""||this.state.dob.length==0){
+    alert("Enter Date Of Birth");
+    console.log(document.getElementById("dob").value);
+    return;
+} 
 
-// if(doe==undefined||doe==null||doe==""||doe.length==0){
-//     alert("Enter Date Of Enrollment");
-//     return;
-// }else{
-//     doe=doe.trim();
-// }
+if(this.state.doe==undefined||this.state.doe==null||this.state.doe==""||this.state.doe.length==0){
+    alert("Enter Date Of Enrollment");
+    return;
+}
+
+if(this.state.dob>=this.state.doe){
+  alert("DOB cannot greater than equal to DOE");
+  return;
+}
+if(this.state.dob.getYear()==new Date().getYear() && this.state.dob.getMonth()==new Date().getMonth()){
+  alert("DOB seems invalid, child is too young!!");
+  return;
+}
+
 if(rollnumber==undefined||rollnumber==null||rollnumber==""||rollnumber.length==0){
     alert("Enter RollNumber Assigned");
     return;
@@ -166,15 +312,16 @@ if(rollnumber==undefined||rollnumber==null||rollnumber==""||rollnumber.length==0
 else{
     rollnumber=rollnumber.trim();
 }
-if(face==undefined||face==null||face==""||face.length==0){
-    alert("Select the Student Image");
-    return;
-}
+// if(face==undefined||face==null||face==""||face.length==0){
+//     alert("Select the Student Image");
+//     return;
+// }
 
 //now check for mobile and adhar card numbers 
 if(mobileNumber.match(/\d/g).length===10){
     console.log("mobile number seems valid");
 }else{
+   
     alert("Enter valid Mobile Number Please!!");
     return;
 }
@@ -183,6 +330,7 @@ if(sAadhar.match(/[0-9]{12}/g)){
     console.log("Student Aadhar seems valid");
      
 }else{
+   
     alert("Enter Valid 12 digit Student Aadhar");
     return;
 }
@@ -191,15 +339,42 @@ if(fAadhar.match(/[0-9]{12}/g)){
     console.log("Father Aadhar seems valid");
      
 }else{
-    alert("Enter Valid 12 digit Father Aadhar");
+   
+  alert("Enter Valid 12 digit Father Aadhar");
+
     return;
 }
-
+let student_name=fullname.toUpperCase();
+let fathers_name = fathersname.toUpperCase();
+let mothers_name = mothersname.toUpperCase();
+let studentAadhar = sAadhar;
+let fathersAadhar = fAadhar;
+let classs = standard;
 let studentDetails={
-    fullname,fathersname,mothersname,standard,address,sAadhar,fAadhar,mobileNumber,village,district,rollnumber,face
+  student_name,fathers_name,mothers_name,classs,address,studentAadhar,fathersAadhar,mobileNumber,village,district,rollnumber,face,
+  dob:new Date(this.state.dob).toUTCString(),
+  doe:new Date(this.state.doe).toUTCString(),
+  gender
 }
  
-console.log(this.state);
+console.log(studentDetails);
+//make the backened request 
+let self = this;
+ 
+axios.post(this.registerStudentUrl,studentDetails).then((response) => {
+  console.log(response);
+  // self.setState({
+  //   progress:false
+  // })
+  if(response.data.error==true){
+    self.setState({errorDialog:true,errorMessage:response.data.errorMessage});
+  }else{
+    self.setState({successDialog:true,successMessage:response.data.successMessage});
+  }
+  
+}, (error) => {
+  console.log(error);
+});
 
 }
 
@@ -259,6 +434,7 @@ console.log(this.state);
       </div>
       <div class="col-75">
         <select id="class" name="class">
+          <option value="choose">Choose</option>
           <option value="Nursery">Nursery</option>
           <option value="First">First</option>
           <option value="Second">Second</option>
@@ -359,7 +535,7 @@ console.log(this.state);
         <label for="rollnumber">Rollnumber Assigned</label>
       </div>
       <div class="col-75">
-        <input type="text" id="rollnumber" name="rollnumber" placeholder="Rollnumber Assigned..."/>
+        <input type="text" id="rollnumber" name="rollnumber" placeholder="Rollnumber Assigned..." disabled onClick={this.askRollnumberComplete}/>
       </div>
     </div>
 
@@ -380,11 +556,23 @@ console.log(this.state);
 
 
     <div class="row">
+      {this.state.progress==true?
+    <CircularProgress style={{
+      position:"fixed",
+      bottom:this.props.windowWidth/2 - 10 ,
+      right:this.props.windowHeight/2 - 10
+    }}/>:
+    <div/>
+      }
+
       <Button id="submitButton" variant="contained" color="green" onClick={this.handleSubmitButton}>Submit</Button>
     </div>
   </form>
+  <ErrorDialog show={this.state.errorDialog} errorMessage={this.state.errorMessage} onClose={this.closeErrorDialog}/>
+  <SuccessDialog show={this.state.successDialog} successMessage={this.state.successMessage} onClose={this.closeSuccessDialog}/>
 </div>
             </div>
         )
     }
 }
+export default windowSize(AddStudentTab);
