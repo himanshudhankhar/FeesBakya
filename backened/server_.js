@@ -41,7 +41,7 @@ function updateClassRollNumberRecordByOne(classs) {
       if (err) {
         throw err;
       }
-      dbo.close();
+      db.close();
     });
   });
 }
@@ -61,8 +61,11 @@ function validRollNumber(rollnumber) {
     return false;
   }
   rollnumber = rollnumber.toString().trim();
-  if (rollnumber.length < 9) {
+  if (rollnumber.length != 9) {
+    console.log(rollnumber.length);
     return false;
+  }else{
+    console.log("bhai sahab",rollnumber);
   }
   let classs = rollnumber.substr(0, 2);
   let year = rollnumber.substr(2, 4);
@@ -767,11 +770,11 @@ app.post('/removeStudentConfirmation', (req, res) => {
   //     rollnumber
   // }
   var removedStudentDetails = req.body.removedStudentDetails;
-  if (removedStudentDetails.rollnumber == undefined || removedStudentDetails.rollnumber == null || removedStudentDetails.rollnumber.length == 0) {
+  if (removedStudentDetails.rollnumber == undefined || removedStudentDetails.rollnumber == null || removedStudentDetails.rollnumber.length == 0||!validRollNumber(removedStudentDetails.rollnumber)) {
     res.send({
       error: true,
       success: false,
-      errorMessage: "roll number not specified!!"
+      errorMessage: "roll number not specified or not valid!!"
     });
     return;
   }
@@ -785,10 +788,10 @@ app.post('/removeStudentConfirmation', (req, res) => {
     var newvalues = {
       $set: {
         active: false,
-        dode: Date()
+        dode: new Date().toUTCString()
       }
     };
-    dbo.collection("student_details").updateOne(myparams, newvalues, function (err, resp) {
+    dbo.collection("student_details").findOneAndUpdate(myparams, newvalues, function (err, resp) {
       if (err) {
         res.send({
           error: true,
@@ -802,6 +805,7 @@ app.post('/removeStudentConfirmation', (req, res) => {
           active: false
         }
       }
+      let studentDetails= resp.value;
       dbo.collection("students_balance_sheet").updateOne({
         rollnumber: myparams.rollnumber
       }, newwValues, function (erorr, respp) {
@@ -817,7 +821,8 @@ app.post('/removeStudentConfirmation', (req, res) => {
         res.send({
           success: true,
           error: false,
-          successMessage: "Made Student inactive, it may be a defaulter"
+          successMessage: "Made Student inactive, it may be a defaulter",
+          studentDetails:studentDetails
         });
         db.close();
       });
@@ -836,7 +841,7 @@ app.post('/add_new_academic_session', (req, res) => {
   //     startdate,
   //     classs.
   // }
-  if (newAcadmeicSession.startDate == undefined || newAcadmeicSession.startDate == null || newAcadmeicSession.startDate.length == 0) {
+  if(newAcadmeicSession.startDate == undefined || newAcadmeicSession.startDate == null || newAcadmeicSession.startDate.length == 0) {
     res.send({
       error: true,
       success: false,
@@ -1423,17 +1428,21 @@ app.get('/getFeesCollectedInYear/:year', (req, res) => {
 });
 //6. request cannot be full filled.
 //7. get student details
-app.get('/getStudentDetails/:rollNumber/:classs/:name', (req, res) => {
-  var rollnumber = req.params.rollnumber;
-  var classs = req.params.classs;
-  var name = req.params.name;
-  if ((name == undefined || name == null || name.length == 0) || (rollnumber == undefined || rollnumber == null || rollnumber.length == 0 || !validRollNumber(rollnumber)) || (classs == undefined || classs == null || classs.length == 0)) {
+app.post('/getStudentDetails', (req, res) => {
+ console.log("req query " ,req.body);
+ 
+  var rollnumber = req.body.query.rollnumber;
+  var classs = req.body.query.classs;
+  var name = req.body.query.name;
+  if ((name == undefined || name == null || name.length == 0) && (rollnumber == undefined || rollnumber == null || rollnumber.length == 0 || !validRollNumber(rollnumber)) && (classs == undefined || classs == null || classs.length == 0)) {
     res.send({
       error: true,
       success: false,
-      errorMessage: "name , rollnumber , class not defined or not in proper syntax!!"
+      errorMessage: "Name or Roll number or Class are not correct!!"
     });
     return;
+  }else{
+    console.log(name,rollnumber,classs);
   }
   var students_found = [];
 
@@ -1449,9 +1458,8 @@ app.get('/getStudentDetails/:rollNumber/:classs/:name', (req, res) => {
       throw err
     };
     var dbo = db.db("FeesBakya");
-    dbo.collection("student_details").find({
-      active: true
-    }, function (err, result) { //just fetch all students
+    dbo.collection("student_details").find().toArray(
+    function (err, results) { //just fetch all students
       if (err) {
         res.send({
           error: true,
@@ -1462,13 +1470,14 @@ app.get('/getStudentDetails/:rollNumber/:classs/:name', (req, res) => {
       }
       //result will be an array of collections
       //it is assumed that some of the students will be active there
+      console.log(results);
       for (let i = 0; i < results.length; i++) {
         if (results[i].rollnumber == rollnumber) {
           students_found.push(results[i]);
-        } else if (part_of_name_matches(result[i].student_name, name)) {
-          students_found.push(result[i]);
-        } else if (classCalculated(result[i].doe, result[i].classs) == classs) {
-          students_found.push(result[i]);
+        } else if (results[i].student_name.indexOf(name) > -1 ||(name!==undefined && name!==null && name.length!=0 && name.indexOf( results[i].student_name) > -1) ) {
+          students_found.push(results[i]);
+        } else if (classs!==undefined && classs!==null && classs==results[i].classs) {
+          students_found.push(results[i]);
         }
       }
 

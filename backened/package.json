@@ -13,6 +13,7 @@
     "aadhaar-validator": "^1.1.0",
     "async": "^3.1.1",
     "mongodb": "^3.5.2",
-    "nodemon": "^2.0.2"
+    "nodemon": "^2.0.2",
+    "react-custom-scrollbars": "^4.2.1"
   }
 }
