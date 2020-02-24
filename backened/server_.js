@@ -64,8 +64,8 @@ function validRollNumber(rollnumber) {
   if (rollnumber.length != 9) {
     console.log(rollnumber.length);
     return false;
-  }else{
-    console.log("bhai sahab",rollnumber);
+  } else {
+    console.log("bhai sahab", rollnumber);
   }
   let classs = rollnumber.substr(0, 2);
   let year = rollnumber.substr(2, 4);
@@ -770,7 +770,7 @@ app.post('/removeStudentConfirmation', (req, res) => {
   //     rollnumber
   // }
   var removedStudentDetails = req.body.removedStudentDetails;
-  if (removedStudentDetails.rollnumber == undefined || removedStudentDetails.rollnumber == null || removedStudentDetails.rollnumber.length == 0||!validRollNumber(removedStudentDetails.rollnumber)) {
+  if (removedStudentDetails.rollnumber == undefined || removedStudentDetails.rollnumber == null || removedStudentDetails.rollnumber.length == 0 || !validRollNumber(removedStudentDetails.rollnumber)) {
     res.send({
       error: true,
       success: false,
@@ -805,7 +805,7 @@ app.post('/removeStudentConfirmation', (req, res) => {
           active: false
         }
       }
-      let studentDetails= resp.value;
+      let studentDetails = resp.value;
       dbo.collection("students_balance_sheet").updateOne({
         rollnumber: myparams.rollnumber
       }, newwValues, function (erorr, respp) {
@@ -822,7 +822,7 @@ app.post('/removeStudentConfirmation', (req, res) => {
           success: true,
           error: false,
           successMessage: "Made Student inactive, it may be a defaulter",
-          studentDetails:studentDetails
+          studentDetails: studentDetails
         });
         db.close();
       });
@@ -841,7 +841,7 @@ app.post('/add_new_academic_session', (req, res) => {
   //     startdate,
   //     classs.
   // }
-  if(newAcadmeicSession.startDate == undefined || newAcadmeicSession.startDate == null || newAcadmeicSession.startDate.length == 0) {
+  if (newAcadmeicSession.startDate == undefined || newAcadmeicSession.startDate == null || newAcadmeicSession.startDate.length == 0) {
     res.send({
       error: true,
       success: false,
@@ -1429,8 +1429,8 @@ app.get('/getFeesCollectedInYear/:year', (req, res) => {
 //6. request cannot be full filled.
 //7. get student details
 app.post('/getStudentDetails', (req, res) => {
- console.log("req query " ,req.body);
- 
+  console.log("req query ", req.body);
+
   var rollnumber = req.body.query.rollnumber;
   var classs = req.body.query.classs;
   var name = req.body.query.name;
@@ -1441,8 +1441,8 @@ app.post('/getStudentDetails', (req, res) => {
       errorMessage: "Name or Roll number or Class are not correct!!"
     });
     return;
-  }else{
-    console.log(name,rollnumber,classs);
+  } else {
+    console.log(name, rollnumber, classs);
   }
   var students_found = [];
 
@@ -1459,39 +1459,43 @@ app.post('/getStudentDetails', (req, res) => {
     };
     var dbo = db.db("FeesBakya");
     dbo.collection("student_details").find().toArray(
-    function (err, results) { //just fetch all students
-      if (err) {
-        res.send({
-          error: true,
-          success: false,
-          errorMessage: "database error!!"
-        });
-        throw err;
-      }
-      //result will be an array of collections
-      //it is assumed that some of the students will be active there
-      console.log(results);
-      for (let i = 0; i < results.length; i++) {
-        if (results[i].rollnumber == rollnumber) {
-          students_found.push(results[i]);
-        } else if (results[i].student_name.indexOf(name) > -1 ||(name!==undefined && name!==null && name.length!=0 && name.indexOf( results[i].student_name) > -1) ) {
-          students_found.push(results[i]);
-        } else if (classs!==undefined && classs!==null && classs==results[i].classs) {
-          students_found.push(results[i]);
+      function (err, results) { //just fetch all students
+        if (err) {
+          res.send({
+            error: true,
+            success: false,
+            errorMessage: "database error!!"
+          });
+          throw err;
         }
-      }
+        //result will be an array of collections
+        //it is assumed that some of the students will be active there
+        console.log(results);
+        if(name!==null && name!==undefined){
+        name=name.toUpperCase();
+        }
+        for (let i = 0; i < results.length; i++) {
+          if ((rollnumber!==null) &&( results[i].rollnumber == rollnumber)) {
+            console.log("Get details roll number matched!!")
+            students_found.push(results[i]);
+          } else if ((name!==null) && (results[i].student_name.indexOf(name) > -1 || (name !== undefined && name !== null && name.length != 0 && name.indexOf(results[i].student_name) > -1))) {
+            students_found.push(results[i]);
+          } else if ((classs!==null) && (classs !== undefined && classs !== null && classs == results[i].classs)) {
+            students_found.push(results[i]);
+          }
+        }
 
-      res.send({
-        error: false,
-        success: true,
-        students_found: students_found,
-        successMessage: "This list can be empty!!"
+        res.send({
+          error: false,
+          success: true,
+          students_found: students_found,
+          successMessage: "This list can be empty!!"
+        });
+
+
+
+        db.close();
       });
-
-
-
-      db.close();
-    });
   });
 
 
