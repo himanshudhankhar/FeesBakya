@@ -22,9 +22,72 @@ app.use(function (req, res, next) {
 });
 
 
+async function rollnumberCheck(rollnumber){
+  if(rollnumber==undefined||rollnumber==null||!validRollNumber(rollnumber)){
+    return false;
+  }
+  let strength = rollnumber.substr(6, 3);
+  let classs = rollnumber.substr(0,2);
+  var classess = {
+    'Nr': "Nursery",
+    'Lk': "LKG",
+    'Uk': "UKG",
+    'Fi': 'First',
+    'Se': 'Second',
+    'Th': "Third",
+    'Fu': 'Fourth',
+    'Fi': "Fifth",
+    'Sx': "Sixth",
+    'Sv': "Seventh",
+    "Eg": 'Eighth',
+    'Nn': "Ninth",
+    'Tn': "Tenth",
+    'El': "Eleventh",
+    "Tw": "Twelfth"
+  }
+  classs = classess[classs];
+  let prom = new Promise((resolve,reject)=>{
+  MongoClient.connect(url, function (err, db) {
+    if (err){
+      res.send({
+        error:true,
+        success:false,
+        errorMEssage:"Some critical Error in DB"
+      })
+throw err;
+    } 
+    var dbo = db.db("FeesBakya");
+     
+    dbo.collection("class_rollnumber_record").findOne({classs:classs}, function (err, resp) {
+      if (err) {
+        res.send({
+          error: true,
+          success: false,
+          errorMessage: "DataBase Error"
+        });
+        reject(err);
+      }
+      console.log(resp);
+      db.close();
+       resolve(resp);
+     
+    });
+  });
 
+});
 
+let result = await prom;
+return result.availableRollnumber>strength;
 
+}  
+
+function abs(value){
+  if(value<0){
+    return -value;
+  }else{
+    return value;
+  }
+}
 
 
 function updateClassRollNumberRecordByOne(classs) {
@@ -678,7 +741,7 @@ app.post('/deposit_balance', (req, res) => {
   // }
   var depositExtraBalance = req.body.depositExtraBalance;
 
-  if (depositExtraBalance.rollnumber == undefined || depositExtraBalance.rollnumber == null || depositExtraBalance.rollnumber.length == 0) {
+  if (depositExtraBalance.rollnumber == undefined || depositExtraBalance.rollnumber == null || depositExtraBalance.rollnumber.length == 0 || !validRollNumber(depositExtraBalance.rollnumber)) {
     res.send({
       error: true,
       success: false,
@@ -716,10 +779,25 @@ app.post('/deposit_balance', (req, res) => {
     res.send({
       error: true,
       success: false,
-      errorMessage: "take or give not specified!!"
+      errorMessage: "payment date not specified!!"
     });
     return;
   }
+
+  rollnumberCheck(depositExtraBalance.rollnumber).then(outPut=>{
+    console.log(outPut);
+    if(outPut==false){
+      res.send({
+        error:true,
+        errorMessage:"Roll Number Invalid!!",
+        success:false
+      });
+      return;
+    }
+ 
+
+
+  //check whether that rollnumber exists or not;
   MongoClient.connect(url, function (err, db) {
     if (err) throw err;
     var dbo = db.db("FeesBakya");
@@ -756,13 +834,27 @@ app.post('/deposit_balance', (req, res) => {
           throw erorrr;
         }
 
+        res.send({
+          error:false,
+          success:true,
+          successMessage:"Balance added to credit/debit and student balance sheet"
+        });
+
       })
     });
   });
   //balance credit debit
+
+
+}).catch(err=>{
+  res.send({
+    error:true,
+    errorMessage:"Some error in DB",
+    success:false
+  });
+  return;
+})
 });
-
-
 //5. Remove Student Confirmation
 app.post('/removeStudentConfirmation', (req, res) => {
   console.log(req.body.removedStudentDetails);
