@@ -119,11 +119,51 @@ axios.post("http://localhost:5000/deposit_balance",{depositExtraBalance:{
 
 
 }
-handleFeesPayment(){
-  //make backened calls from here and check whether feespayment details are valid and then check response of backened
-}
 
 handleSetFeesRule(){
+  //make backened calls from here and check whether feespayment details are valid and then check response of backened
+  let classSelected = document.getElementById("classSelection").value;
+  let dateOfImplementation = this.state.feesImplementationDate; ///this date has to be todays date you cannot change the date of implementation
+  let amountFeesImplemented  = document.getElementById("feesRuleAmount").value;
+if(classSelected==null||classSelected==undefined||classSelected=="Choose"){
+  alert("Select a class for new fees rule");
+  return;
+}
+console.log(amountFeesImplemented);
+if(amountFeesImplemented==undefined||amountFeesImplemented==null||amountFeesImplemented.length==0||!amountFeesImplemented.match(/^[0-9]+$/)){
+  alert("Enter numerical value in amount of Fees Rule");
+  return;
+}
+//make a post request to 
+let self= this;
+axios.post('http://localhost:5000/add_fees_rule',{feesRuleData:{
+  classs:classSelected,
+  dateOfImplementation,
+  feesAmount:amountFeesImplemented
+}}).then(response => {
+  console.log(response.data);
+  let data = response.data;
+  if(data.error==true){
+self.setState({
+  errorDialog:true,
+  errorMessage:data.errorMessage
+});
+  }else if(data.success==true){
+    document.getElementById("classSelection").value="Choose";
+    document.getElementById("feesRuleAmount").value = "";
+    
+    self.setState({
+      successDialog:true,
+      successMessage:data.successMessage
+    });
+  }
+}).catch(err=>{
+  console.log(err);
+})
+
+}
+
+handleFeesPayment(){
   //make backened call from here
 }
 
@@ -150,7 +190,7 @@ render(){
                 <label for="rollnumber"><b>Select Class</b></label>
               </div>
               <div class="col-75">
-        <select id="classs" name="class">
+        <select id="classSelection" name="class">
           <option value= "Choose">Choose</option>
           <option value="Nursery">Nursery</option>
           <option value="First">First</option>
@@ -174,8 +214,9 @@ render(){
       </div>
       <div class="col-75">
       <DatePicker
-        selected={new Date()}
+        selected={this.state.feesImplementationDate}
         onChange={this.handleChangeFeesImplementationDate}
+        disabled
       />
       </div>
     </div>
@@ -184,7 +225,7 @@ render(){
       <label for="class"><b>Set Fees(Rs.)</b></label>
     </div>
     <div class="col-75">
-   <input type="text" placeholder="500" />
+   <input type="text" placeholder="ex: 500" id="feesRuleAmount"/>
     </div>
   </div>
   <Button id="submitButton3" variant="contained" onClick={this.handleSetFeesRule}>Set</Button>

@@ -679,7 +679,8 @@ app.post('/add_fees_rule', (req, res) => {
     if (err) throw err;
     var dbo = db.db("FeesBakya");
     var myparams = {
-      classs: feesRuleData.classs
+      classs: feesRuleData.classs,
+      active:true
     };
     var newvalues = {
       $set: {
@@ -715,6 +716,7 @@ app.post('/add_fees_rule', (req, res) => {
           error: false,
           errorMessage: "",
           feesPaymentData: feesRuleData,
+          successMessage:"New Fees Rule will be implemented by next Month's 1st Date"
         });
         console.log("fees rule accepted");
         db.close();
