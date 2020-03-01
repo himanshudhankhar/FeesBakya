@@ -22,12 +22,12 @@ app.use(function (req, res, next) {
 });
 
 
-async function rollnumberCheck(rollnumber){
-  if(rollnumber==undefined||rollnumber==null||!validRollNumber(rollnumber)){
+async function rollnumberCheck(rollnumber) {
+  if (rollnumber == undefined || rollnumber == null || !validRollNumber(rollnumber)) {
     return false;
   }
   let strength = rollnumber.substr(6, 3);
-  let classs = rollnumber.substr(0,2);
+  let classs = rollnumber.substr(0, 2);
   var classess = {
     'Nr': "Nursery",
     'Lk': "LKG",
@@ -46,45 +46,47 @@ async function rollnumberCheck(rollnumber){
     "Tw": "Twelfth"
   }
   classs = classess[classs];
-  let prom = new Promise((resolve,reject)=>{
-  MongoClient.connect(url, function (err, db) {
-    if (err){
-      res.send({
-        error:true,
-        success:false,
-        errorMEssage:"Some critical Error in DB"
-      })
-throw err;
-    } 
-    var dbo = db.db("FeesBakya");
-     
-    dbo.collection("class_rollnumber_record").findOne({classs:classs}, function (err, resp) {
+  let prom = new Promise((resolve, reject) => {
+    MongoClient.connect(url, function (err, db) {
       if (err) {
         res.send({
           error: true,
           success: false,
-          errorMessage: "DataBase Error"
-        });
-        reject(err);
+          errorMEssage: "Some critical Error in DB"
+        })
+        throw err;
       }
-      console.log(resp);
-      db.close();
-       resolve(resp);
-     
+      var dbo = db.db("FeesBakya");
+
+      dbo.collection("class_rollnumber_record").findOne({
+        classs: classs
+      }, function (err, resp) {
+        if (err) {
+          res.send({
+            error: true,
+            success: false,
+            errorMessage: "DataBase Error"
+          });
+          reject(err);
+        }
+        console.log(resp);
+        db.close();
+        resolve(resp);
+
+      });
     });
+
   });
 
-});
+  let result = await prom;
+  return result.availableRollnumber > strength;
 
-let result = await prom;
-return result.availableRollnumber>strength;
+}
 
-}  
-
-function abs(value){
-  if(value<0){
+function abs(value) {
+  if (value < 0) {
     return -value;
-  }else{
+  } else {
     return value;
   }
 }
@@ -548,97 +550,73 @@ app.post('/confirm_fees_deposit', (req, res) => {
       errorMesage: "Payer's rollnumber not specified!!"
     });
     return;
+  } else if (!validRollNumber(feesPaymentData.rollnumber)) {
+    res.send({
+      success: false,
+      error: true,
+      errorMesage: "Payer's rollnumber not valid!!"
+    });
+    return;
   }
   // add payment to db
 
-  MongoClient.connect(url, function (err, db) {
-    if (err) throw err;
-    var dbo = db.db("FeesBakya");
-    var myobj = feesPaymentData;
-    dbo.collection("fees_submission_details").insertOne(myobj, function (err, resp) {
-      if (err) {
-        res.send({
-          error: true,
-          success: false,
-          errorMessage: "DataBase Error"
-        });
-        throw err;
-      }
-      dbo.collection("students_balance_sheet").findOne({
-        rollnumber: feesPaymentData.rollnumberr
-      }, (errorr, respp) => {
-        if (errorr) {
+
+  //from the database check whether a rollnumber is valid or not;
+  rollnumberCheck(feesPaymentData.rollnumber).then(outPut => {
+    console.log(outPut);
+    if (outPut == false) {
+      res.send({
+        error: true,
+        errorMessage: "Roll Number Invalid!!",
+        success: false
+      });
+      return;
+    }
+
+
+    MongoClient.connect(url, function (err, db) {
+      if (err) throw err;
+      var dbo = db.db("FeesBakya");
+      var myobj = feesPaymentData;
+      dbo.collection("fees_submission_details").insertOne(myobj, function (err, resp) {
+        if (err) {
           res.send({
             error: true,
             success: false,
-            errorMessage: "DataBase Error"
+            errorMessage: "DataBase Error while adding fees to DB"
           });
-          dbo.collection("fees_submission_details").deleteOne({
-            _id: resp._id
-          }, (erroring, resposnse) => {
-            if (erroring) {
-              res.send({
-                error: true,
-                success: false,
-                errorMessage: "critial DataBase Error while reading from balance sheet!!"
-              });
-              console.log("Big failure!!");
-              throw erroring;
-            }
-          });
-
-          console.log("write in fees submission but not in students balance sheet!!");
-          throw errorr;
+          throw err;
         }
-        //no error suppose
-        var initialAmount = respp.amountTotal; // here error can come
-        db.collection("students_balance_sheet").updateOne({
-          rollnumber: respp.rollnumber
+        dbo.collection("students_balance_sheet").findOneAndUpdate({
+          rollnumber: myobj.rollnumber
         }, {
-          $set: {
-            amountTotal: parseInt(initialAmount) + parseInt(feesPaymentData.feesAmount)
+          $inc: {
+            amountTotal: parseInt(myobj.feesAmount)
           }
-        }, (eror, reesp) => {
-          if (eror) {
+        }, (erorrr, resppp) => {
+          if (erorrr) {
             res.send({
               error: true,
               success: false,
-              errorMessage: "DataBase Error"
+              errorMessage: "Critical database error!!"
             });
-            dbo.collection("fees_submission_details").deleteOne({
-              _id: resp._id
-            }, (erroring, resposnse) => {
-              if (erroring) {
-                res.send({
-                  error: true,
-                  success: false,
-                  errorMessage: "critial DataBase Error while writing in balance sheet"
-                });
-                console.log("Big failure!!");
-                throw erroring;
-              }
-            });
-
-            console.log("write in fees submission but not in students balance sheet!!");
-            throw eror;
+            throw erorrr;
           }
 
-          //you have updated successfully 
           res.send({
             error: false,
             success: true,
-            successMessage: "successfuly updated balance sheet and fees transaction!!"
+            successMessage: "Fees addded and Student Balance sheet updated!!"
           });
-          //done here all parts
+          db.close();
         });
-      })
+
+        // part done.
+      });
+
     });
   });
-
-  // part done.
 });
-
-
 //3. Add Fees Rule
 app.post('/add_fees_rule', (req, res) => {
   console.log(req.body.feesRuleData);
@@ -680,7 +658,7 @@ app.post('/add_fees_rule', (req, res) => {
     var dbo = db.db("FeesBakya");
     var myparams = {
       classs: feesRuleData.classs,
-      active:true
+      active: true
     };
     var newvalues = {
       $set: {
@@ -716,7 +694,7 @@ app.post('/add_fees_rule', (req, res) => {
           error: false,
           errorMessage: "",
           feesPaymentData: feesRuleData,
-          successMessage:"New Fees Rule will be implemented by next Month's 1st Date"
+          successMessage: "New Fees Rule will be implemented by next Month's 1st Date"
         });
         console.log("fees rule accepted");
         db.close();
@@ -786,76 +764,76 @@ app.post('/deposit_balance', (req, res) => {
     return;
   }
 
-  rollnumberCheck(depositExtraBalance.rollnumber).then(outPut=>{
+  rollnumberCheck(depositExtraBalance.rollnumber).then(outPut => {
     console.log(outPut);
-    if(outPut==false){
+    if (outPut == false) {
       res.send({
-        error:true,
-        errorMessage:"Roll Number Invalid!!",
-        success:false
+        error: true,
+        errorMessage: "Roll Number Invalid!!",
+        success: false
       });
       return;
     }
- 
 
 
-  //check whether that rollnumber exists or not;
-  MongoClient.connect(url, function (err, db) {
-    if (err) throw err;
-    var dbo = db.db("FeesBakya");
-    var myobj = depositExtraBalance;
-    //you have to make it positive or negative
-    if (myobj.take_or_give == "take") {
-      //uss se lene hain then make amount negative
-      myobj.amount = -abs(myobj.amount);
-    } else {
-      myobj.amount = abs(myobj.amount);
-    }
-    dbo.collection("balance_credit_debit_details").insertOne(myobj, function (err, resp) {
-      if (err) {
-        res.send({
-          error: true,
-          success: false,
-          errorMessage: "DataBase Error"
-        });
-        throw err;
+
+    //check whether that rollnumber exists or not;
+    MongoClient.connect(url, function (err, db) {
+      if (err) throw err;
+      var dbo = db.db("FeesBakya");
+      var myobj = depositExtraBalance;
+      //you have to make it positive or negative
+      if (myobj.take_or_give == "take") {
+        //uss se lene hain then make amount negative
+        myobj.amount = -abs(myobj.amount);
+      } else {
+        myobj.amount = abs(myobj.amount);
       }
-      dbo.collection("students_balance_sheet").findOneAndUpdate({
-        rollnumber: myobj.rollnumber
-      }, {
-        $inc: {
-          amountTotal: myobj.amount
-        }
-      }, (erorrr, resppp) => {
-        if (erorrr) {
+      dbo.collection("balance_credit_debit_details").insertOne(myobj, function (err, resp) {
+        if (err) {
           res.send({
             error: true,
             success: false,
-            errorMessage: "Critical database error!!"
+            errorMessage: "DataBase Error"
           });
-          throw erorrr;
+          throw err;
         }
+        dbo.collection("students_balance_sheet").findOneAndUpdate({
+          rollnumber: myobj.rollnumber
+        }, {
+          $inc: {
+            amountTotal: myobj.amount
+          }
+        }, (erorrr, resppp) => {
+          if (erorrr) {
+            res.send({
+              error: true,
+              success: false,
+              errorMessage: "Critical database error!!"
+            });
+            throw erorrr;
+          }
 
-        res.send({
-          error:false,
-          success:true,
-          successMessage:"Balance added to credit/debit and student balance sheet"
-        });
+          res.send({
+            error: false,
+            success: true,
+            successMessage: "Balance added to credit/debit and student balance sheet"
+          });
 
-      })
+        })
+      });
     });
-  });
-  //balance credit debit
+    //balance credit debit
 
 
-}).catch(err=>{
-  res.send({
-    error:true,
-    errorMessage:"Some error in DB",
-    success:false
-  });
-  return;
-})
+  }).catch(err => {
+    res.send({
+      error: true,
+      errorMessage: "Some error in DB",
+      success: false
+    });
+    return;
+  })
 });
 //5. Remove Student Confirmation
 app.post('/removeStudentConfirmation', (req, res) => {
@@ -1565,16 +1543,16 @@ app.post('/getStudentDetails', (req, res) => {
         //result will be an array of collections
         //it is assumed that some of the students will be active there
         console.log(results);
-        if(name!==null && name!==undefined){
-        name=name.toUpperCase();
+        if (name !== null && name !== undefined) {
+          name = name.toUpperCase();
         }
         for (let i = 0; i < results.length; i++) {
-          if ((rollnumber!==null) &&( results[i].rollnumber == rollnumber)) {
+          if ((rollnumber !== null) && (results[i].rollnumber == rollnumber)) {
             console.log("Get details roll number matched!!")
             students_found.push(results[i]);
-          } else if ((name!==null) && (results[i].student_name.indexOf(name) > -1 || (name !== undefined && name !== null && name.length != 0 && name.indexOf(results[i].student_name) > -1))) {
+          } else if ((name !== null) && (results[i].student_name.indexOf(name) > -1 || (name !== undefined && name !== null && name.length != 0 && name.indexOf(results[i].student_name) > -1))) {
             students_found.push(results[i]);
-          } else if ((classs!==null) && (classs !== undefined && classs !== null && classs == results[i].classs)) {
+          } else if ((classs !== null) && (classs !== undefined && classs !== null && classs == results[i].classs)) {
             students_found.push(results[i]);
           }
         }

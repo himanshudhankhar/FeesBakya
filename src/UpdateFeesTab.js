@@ -165,6 +165,50 @@ self.setState({
 
 handleFeesPayment(){
   //make backened call from here
+  let paymentRollnumber= document.getElementById("feesPaymentRollnumber").value;
+  let paymentAmount = document.getElementById("feesPaymentAmount").value;
+  let paymentDate = this.state.feesPaymentDate;
+
+if(paymentRollnumber==undefined||paymentRollnumber==null||paymentRollnumber.length==0){
+  alert("Enter Fees Payment Rollnumber");
+  return;
+}
+
+if(paymentAmount==undefined||paymentAmount==null||paymentAmount.length==0||!paymentAmount.match(/^[0-9]+$/)){
+  alert("Enter Amount in numerical value");
+  return;
+}
+let self =this;
+axios.post("http://localhost:5000/confirm_fees_deposit",{
+  feesPaymentData:{
+    feesAmount:paymentAmount,
+    rollnumber:paymentRollnumber,
+    paymentDate
+  }
+}).then(response=>{
+  let data = response.data;
+  if(data.error==true){
+    self.setState({
+      errorDialog:true,
+      errorMessage:data.errorMessage
+    });
+  }else{
+    document.getElementById("feesPaymentRollnumber").value="";
+    document.getElementById("feesPaymentAmount").value="";
+    self.setState({
+      successDialog:true,
+      successMessage:data.successMessage
+    });
+  }
+}).catch(err=>{
+  console.log(err);
+  self.setState({
+    errorDialog:true,
+    errorMessage:"Some backened Error errupted!!"
+  });
+})
+
+
 }
 
 handleChangePaymentDateFees(date){
@@ -241,7 +285,7 @@ render(){
       <label for="class"><b>Enter RollNumber:</b></label>
     </div>
     <div class="col-75">
-   <input type="text" placeholder="ex. C9B34" />
+   <input type="text" id="feesPaymentRollnumber" placeholder="ex. Tn2020001" />
     </div>
   </div>
 
@@ -250,7 +294,7 @@ render(){
       <label for="class"><b>Enter Amount Paid(Rs.):</b></label>
     </div>
     <div class="col-75">
-   <input type="text" placeholder="ex. 5000" />
+   <input type="text" id="feesPaymentAmount" placeholder="ex. 5000" />
     </div>
   </div>
   <div class="row">
@@ -259,7 +303,7 @@ render(){
       </div>
       <div class="col-75">
       <DatePicker
-        selected={new Date()}
+        selected={this.state.feesPaymentDate}
         onChange={this.handleChangePaymentDateFees}
       />
       </div>
@@ -327,7 +371,7 @@ render(){
       </div>
       <div class="col-75">
       <DatePicker
-        selected={new Date()}
+        selected={this.state.balanceAdditionDate}
         onChange={this.handleChangeAddBalanceDate}
       />
       </div>
