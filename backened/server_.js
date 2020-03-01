@@ -525,13 +525,15 @@ app.post('/confirm_fees_deposit', (req, res) => {
 
 
 
-  if (feesPaymentData.feesAmount == undefined || feesPaymentData.feesAmount == null || feesPaymentData.feesAmount.length == 0) {
+  if (feesPaymentData.feesAmount == undefined || feesPaymentData.feesAmount == null || feesPaymentData.feesAmount.length == 0 ||!feesPaymentData.feesAmount.match(/^[0-9]+$/)) {
     res.send({
       success: false,
       error: true,
-      errorMesage: "Fees Amount not entered"
+      errorMesage: "Fees Amount not entered or not numberic"
     });
     return;
+  }else{
+    feesPaymentData.feesAmount=parseInt(feesPaymentData.feesAmount);
   }
 
   if (feesPaymentData.paymentDate == undefined || feesPaymentData.paymentDate == null || feesPaymentData.paymentDate.length == 0) {
@@ -1550,7 +1552,7 @@ app.post('/getStudentDetails', (req, res) => {
           if ((rollnumber !== null) && (results[i].rollnumber == rollnumber)) {
             console.log("Get details roll number matched!!")
             students_found.push(results[i]);
-          } else if ((name !== null) && (results[i].student_name.indexOf(name) > -1 || (name !== undefined && name !== null && name.length != 0 && name.indexOf(results[i].student_name) > -1))) {
+          } else if ((name!=undefined && name !== null && name.length!=0) && (results[i].student_name.indexOf(name) > -1 || (name !== undefined && name !== null && name.length != 0 && name.indexOf(results[i].student_name) > -1))) {
             students_found.push(results[i]);
           } else if ((classs !== null) && (classs !== undefined && classs !== null && classs == results[i].classs)) {
             students_found.push(results[i]);
@@ -1574,15 +1576,15 @@ app.post('/getStudentDetails', (req, res) => {
 
 });
 //8. get defaulters by name / roll number / class
-app.get('/getDefaultersDetails/:rollnumber/:classs/:name', (req, res) => {
-  var rollnumber = req.params.rollnumber;
-  var classs = req.params.classs;
-  var name = req.params.name;
-  if ((name == undefined || name == null || name.length == 0) || (rollnumber == undefined || rollnumber == null || rollnumber.length == 0 || !validRollNumber(rollnumber)) || (classs == undefined || classs == null || classs.length == 0)) {
+app.post('/getDefaultersDetails', (req, res) => {
+  let rollnumber = req.body.rollnumber;
+  let classs = req.body.classs;
+  let name = req.body.studentName;
+  if ((name == undefined || name == null || name.length == 0) && (rollnumber == undefined || rollnumber == null || rollnumber.length == 0 || !validRollNumber(rollnumber)) && (classs == undefined || classs == null || classs.length == 0)) {
     res.send({
       error: true,
       success: false,
-      errorMessage: "name , rollnumber , class not defined or not in proper syntax for defaulters api!!"
+      errorMessage: "Entered Details are not Valid"
     });
     return;
   }
@@ -1599,7 +1601,7 @@ app.get('/getDefaultersDetails/:rollnumber/:classs/:name', (req, res) => {
       throw err
     };
     var dbo = db.db("FeesBakya");
-    dbo.collection("students_balance_sheet").find({}, function (err, result) { //just fetch all students
+    dbo.collection("students_balance_sheet").find().toArray( function (err, result) { //just fetch all students
       if (err) {
         res.send({
           error: true,
@@ -1608,16 +1610,19 @@ app.get('/getDefaultersDetails/:rollnumber/:classs/:name', (req, res) => {
         });
         throw err;
       }
+      console.log(result);
+       
       for (let i = 0; i < result.length; i++) {
-        if (parseInt(result[i].amount) < 0) {
+        if (parseInt(result[i].amountTotal) < 0 ) {
           defaulters.push({
             rollnumber: result[i].rollnumber,
-            amount: result[i].amount
+            amount: result[i].amountTotal
           });
         }
       }
       //find the student details
-      dbo.collection("student_details").find({}, function (errors, resultt) {
+      
+      dbo.collection("student_details").find().toArray( function (errors, resultt) {
         if (errors) {
           res.send({
             error: true,
@@ -1626,17 +1631,27 @@ app.get('/getDefaultersDetails/:rollnumber/:classs/:name', (req, res) => {
           });
           throw errors;
         }
+        for(let j=0;j<defaulters.length;j++){
         for (let i = 0; i < resultt.length; i++) {
-          if (defaulters[i].rollnumber == resultt.rollnumber) {
-            defaulters[i]['details'] = resultt;
+          if (defaulters[j].rollnumber == resultt[i].rollnumber) {
+            defaulters[j]['details'] = resultt[i];
             continue;
           }
         }
+      }
+
+      let finalResult=[];
+      for(let i=0;i<defaulters.length;i++){
+        if(defaulters[i].details.classs==classs || defaulters[i].details.rollnumber==rollnumber || (name!==undefined && name!==null && name.length!=0 && defaulters[i].details.student_name.indexOf(name.toUpperCase()) > -1) ){
+          
+          finalResult.push(defaulters[i]);
+        }
+      }
         res.send({
           success: true,
           error: false,
           successMessage: "Found defaulters list",
-          defaultersList: defaulters
+          defaultersList: finalResult
         });
         db.close();
       });
@@ -1649,8 +1664,8 @@ app.get('/getDefaultersDetails/:rollnumber/:classs/:name', (req, res) => {
 
 
 //9. all transactions by rollnumber includes paid as well deducted
-app.get('/allTransaction/:rollNumber', (req, res) => {
-  var rollnumber = req.params.rollNumber;
+app.post('/allTransactions', (req, res) => {
+  let rollnumber = req.body.rollnumber;
   if (rollnumber == undefined || rollnumber == null || rollnumber.length == 0 || !validRollNumber(rollnumber)) {
     res.send({
       error: true,
@@ -1672,7 +1687,7 @@ app.get('/allTransaction/:rollNumber', (req, res) => {
     var dbo = db.db("FeesBakya");
     dbo.collection("fees_submission_details").find({
       rollnumber: rollnumber
-    }, function (err, result) { //just fetch all students
+    }).toArray( function (err, result) { //just fetch all students
       if (err) {
         res.send({
           error: true,
@@ -1689,7 +1704,7 @@ app.get('/allTransaction/:rollNumber', (req, res) => {
       }
       dbo.collection("balance_credit_debit_details").find({
         rollnumber: rollnumber
-      }, function (errr, resultt) { //just fetch all students
+      }).toArray( function (errr, resultt) { //just fetch all students
         if (errr) {
           res.send({
             error: true,
@@ -1704,6 +1719,13 @@ app.get('/allTransaction/:rollNumber', (req, res) => {
             type: "Balance added/deducted"
           });
         }
+
+        res.send({
+          error:false,
+          success:true,
+          successMessage:"Found All Transactions of Given Rollnumber",
+          allTransactions
+        })
         db.close();
       });
     });
