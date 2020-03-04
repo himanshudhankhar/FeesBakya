@@ -6,6 +6,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 var MongoClient = require('mongodb').MongoClient;
 var url = "mongodb://localhost:27017/";
+var ImageKit = require("imagekit");
 const app = express();
 var series = require('async/series');
 var async = require('async');
@@ -2141,4 +2142,24 @@ app.get('/estimatedFeesCollectionThisMonth', function (req, res) {
 
 
 });
+
+
+//get request for authentication end point
+app.get("/authenticate",(req,res)=>{
+
+var imagekit = new ImageKit({
+    publicKey : "public_8PFAM11+fdiUFyUXnMIIsr9TP5s=",
+    privateKey : "private_Xi54goaDutcdi3jQ+dm3JImQFQA=",
+    urlEndpoint : "https://ik.imagekit.io/Dhankhar7924/"
+});
+
+
+var authenticationParameters = imagekit.getAuthenticationParameters();
+console.log(authenticationParameters);
+
+res.send(authenticationParameters);
+
+
+});
+
 app.listen(port, () => console.log(`Listening on port ${port}`));

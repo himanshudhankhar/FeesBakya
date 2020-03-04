@@ -155,7 +155,9 @@ self.setState({
                 <label for="rollnumber">Enter Roll Number</label>
               </div>
               <div class="col-75">
-                <input type="text" id="rollnumberQuery" name="rollnumber" placeholder="Rollnumber Assigned..."/>
+                <input type="text" id="rollnumberQuery" name="rollnumber" placeholder="Rollnumber Assigned..." onKeyPress={e => {
+  if (e.key === 'Enter') e.preventDefault();
+}} />
               </div>
             </div>
 
@@ -206,7 +208,9 @@ self.setState({
                 <label for="getDetailsbyName">Enter Name:</label>
               </div>
               <div class="col-75">
-                <input type="text" id="nameQuery" name="getDetailsbyName" placeholder="Enter Name..."/>
+                <input type="text" id="nameQuery" name="getDetailsbyName" placeholder="Enter Name..." onKeyPress={e => {
+  if (e.key === 'Enter') e.preventDefault();
+}} />
               </div>
             </div>
 
@@ -382,7 +386,7 @@ self.setState({
       <label  >Photo:</label>
     </div>
     <div class="col-75">
-       <img style={{width:150,height:150}} src={userImage}/>
+       <img style={{width:150,height:150}} src={value.face}/>
     </div>
   </div>
   

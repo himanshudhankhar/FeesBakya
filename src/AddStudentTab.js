@@ -1,18 +1,26 @@
 import React from 'react';
 import './stylesAdded.css';
+
 import Button from '@material-ui/core/Button';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import axios from "axios";
+import {IKContext ,IKUpload} from "imagekitio-react"
+
+
 import CircularProgress from '@material-ui/core/CircularProgress';
 import SuccessDialog from './SuccessDialog';
 import ErrorDialog from './ErrorDialog';
 import windowSize from 'react-window-size';
+const ImageKit = require('imagekit-javascript');
+const pjson = require('../package.json');
+
 class AddStudentTab extends React.Component{
  registerStudentUrl = "http://localhost:5000/register_student";
 constructor(props){
     super(props);
     this.state={
+      showUploadImage:false,
       progress:false,
 dob:new Date(),
 startDate:new Date(),
@@ -43,6 +51,7 @@ errorMessage:""
     this.handleChangeDoe=this.handleChangeDoe.bind(this);
     this.closeSuccessDialog=this.closeSuccessDialog.bind(this);
     this.closeErrorDialog=this.closeErrorDialog.bind(this);
+    this.reqImageUpload = this.reqImageUpload.bind(this);
 }
 
 closeSuccessDialog(){
@@ -81,7 +90,11 @@ closeSuccessDialog(){
     document.getElementById("district").value="";
    document.getElementById("gender").value="";
    document.getElementById("rollnumber").value="";
-   document.getElementById("face").value="";
+   document.getElementById("ImageUpload").value="";
+   this.setState({
+     face:"",
+     showUploadImage:false
+   })
   
 }
 
@@ -152,9 +165,14 @@ askRollnumber(classs,date){
     "Eleventh":'El',
     "Twelfth":"Tw"
   }
+  let self = this;
   axios.get('http://localhost:5000/getRollNumber/'+classess[classs]+"/"+new Date(date).getFullYear()+"/").then((resp)=>{
   console.log(resp.data.successMessage);
   document.getElementById("rollnumber").value = resp.data.successMessage;
+self.setState({
+  rollnumber:resp.data.successMessage,
+  showUploadImage:true
+})
   }).catch(err=>{
     console.log(err);
   })
@@ -214,8 +232,8 @@ handleSubmitButton(){
     let district = document.getElementById("district").value;
     let gender = document.getElementById("gender").value;
     let rollnumber = document.getElementById("rollnumber").value;
-    let face = document.getElementById("face").value;
-if(fullname==""||fullname==null||fullname==undefined||fullname.length==0){
+    let face =this.state.face;
+ if(fullname==""||fullname==null||fullname==undefined||fullname.length==0){
     alert("Enter Student Name");
     return;
 }else{
@@ -312,10 +330,10 @@ if(rollnumber==undefined||rollnumber==null||rollnumber==""||rollnumber.length==0
 else{
     rollnumber=rollnumber.trim();
 }
-// if(face==undefined||face==null||face==""||face.length==0){
-//     alert("Select the Student Image");
-//     return;
-// }
+if(face==undefined||face==null||face==""||face.length==0){
+    alert("Select the Student Image");
+    return;
+}
 
 //now check for mobile and adhar card numbers 
 if(mobileNumber.match(/\d/g).length===10){
@@ -377,6 +395,95 @@ axios.post(this.registerStudentUrl,studentDetails).then((response) => {
 });
 
 }
+
+
+
+
+reqImageUpload(e,fileName,useUniqueFileName,tags,folder,isPrivateFile,customCoordinates,responseFields){
+console.log(e.target);
+    let publicKey="public_8PFAM11+fdiUFyUXnMIIsr9TP5s=" 
+    let urlEndpoint="https://ik.imagekit.io/Dhankhar7924/" 
+    let authenticationEndpoint="http://localhost:5000/authenticate"
+    
+    let onError = (e, err) => {
+      e.insertAdjacentHTML(
+        "afterend",
+        `<div>${err.message}</div>`
+      );
+    };
+
+    let onSuccess = (e) => {
+      var newDiv = document.createElement("div"); 
+  var newContent = document.createTextNode("Image Uploaded"); 
+  // add the text node to the newly created div
+  newDiv.appendChild(newContent);  
+      document.getElementById("ImageUpload").insertAdjacentElement("afterend",newDiv);
+    };
+
+    if (publicKey === undefined) {
+      throw new Error('Missing publicKey during initialization');
+    }
+
+    if (urlEndpoint === undefined) {
+      throw new Error('Missing urlEndpoint during initialization');
+    }
+
+    if (authenticationEndpoint === undefined) {
+      throw new Error('Missing authenticationEndpoint during initialization');
+    }
+
+    let ik = new ImageKit({
+      sdkVersion : `react-${pjson.version}`,
+      publicKey: publicKey,
+      urlEndpoint: urlEndpoint,
+      authenticationEndpoint: authenticationEndpoint
+    });
+
+    const params = {
+      file: e.target.files[0],
+      fileName: fileName,
+      useUniqueFileName: useUniqueFileName,
+      isPrivateFile: isPrivateFile,
+      folder: folder,
+    }
+    if (tags) {
+      Object.assign(params, { tags: tags });
+    }
+
+    if (customCoordinates) {
+      Object.assign(params, { customCoordinates: customCoordinates });
+    }
+
+    if (responseFields) {
+      Object.assign(params, { responseFields: responseFields });
+    }
+let self = this;
+    ik.upload(params, function (err, result) {
+      if (err) {
+        onError(e, err);
+      } else {
+        self.setState({
+          face:result.url
+        })
+        onSuccess(e);
+      }
+    });
+  }
+
+
+onSuccessImageUpload(result){
+  console.log(result);
+}
+onError(err){
+  console.log(err);
+}
+
+
+
+
+
+
+
 
 
     render(){
@@ -543,10 +650,21 @@ axios.post(this.registerStudentUrl,studentDetails).then((response) => {
     
     <div class="row">
       <div class="col-25">
-        <label for="face">Upload Image</label>
+        <label for="face">Upload Image:</label>
       </div>
       <div class="col-75">
-        <input type="file"    accept="image/*" id="face" name="face" onChange={this.handleFileUpload} />
+        {/* <input type="file"    accept="image/*" id="face" name="face" onChange={this.handleFileUpload} /> */}
+      {this.state.showUploadImage==true?
+      <IKContext  
+    publicKey="public_8PFAM11+fdiUFyUXnMIIsr9TP5s=" 
+    urlEndpoint="https://ik.imagekit.io/Dhankhar7924/" 
+    authenticationEndpoint="http://localhost:5000/authenticate"
+    >
+    <IKUpload fileName={this.state.rollnumber} id="ImageUpload" isPrivateFile= {false} onChange={(e)=>{this.reqImageUpload(e,this.state.rollnumber,false,[],"StudentImages",false)}}/>
+ </IKContext>:
+ <div>
+Get a Rollnumber First
+ </div>}
       </div>
     </div>
 

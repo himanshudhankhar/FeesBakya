@@ -170,7 +170,9 @@ console.log(error);
     <label for="rollnumber">Enter Roll Number</label>
   </div>
   <div class="col-75">
-    <input type="text" id="rollnumber" name="rollnumber" placeholder="Rollnumber Assigned..."/>
+    <input type="text" id="rollnumber" name="rollnumber" placeholder="Rollnumber Assigned..." onKeyPress={e => {
+  if (e.key === 'Enter') e.preventDefault();
+}} />
   </div>
 </div>
 
@@ -186,7 +188,7 @@ console.log(error);
   <SuccessDialog show={this.state.successDialog} successMessage={this.state.successMessage} onClose={this.closeSuccessDialog}/>
 
     <Dialog onClose={this.handleCloseDialog} aria-labelledby="remove-student-dialog" open={this.state.openRemoveStudentDialog}>
-    <DialogTitle id="removeStudentDialog">Remove Student</DialogTitle>
+    <DialogTitle id="removeStudentDialog" style={{backgroundColor:"#1155FF",color:"#FFFFFF" ,fontStyle: 'bold',}}>Remove Student</DialogTitle>
     <Scrollbars autoHeight autoHeightMax={500} autoHeightMin={300}
  autoHide >
       <div style={{display:"flex",flexDirection:"column"}}>
@@ -335,7 +337,7 @@ console.log(error);
         <label  >Photo:</label>
       </div>
       <div class="col-75">
-         <img style={{width:150,height:150}} src={userImage}/>
+         <img style={{width:150,height:150}} src={this.state.studentDetails.face}/>
       </div>
     </div>
 {this.state.studentDetails.active==true?

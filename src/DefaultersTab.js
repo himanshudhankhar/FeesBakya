@@ -349,7 +349,7 @@ self.setState({
 
 
 <Dialog onClose={this.handleCloseFeeDefaulters} aria-labelledby="get-student-details-dialog" open={this.state.openDefaulters}>
-    <DialogTitle id="detailsDialog">All Defaulters</DialogTitle>
+    <DialogTitle id="detailsDialog"  style={{backgroundColor:"#1155FF",color:"#FFFFFF" ,fontStyle: 'bold',}}>All Defaulters</DialogTitle>
     <div style={{display:"flex",flexDirection:"column"}}>
 
         {this.state.defaultersFetched.map(value=>{
