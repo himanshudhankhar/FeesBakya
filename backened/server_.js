@@ -12,6 +12,8 @@ var series = require('async/series');
 var async = require('async');
 const port = process.env.PORT || 5000;
 var validator = require('aadhaar-validator')
+var schedule = require('node-schedule');
+var mailingServiceToOwner = require('./mailingService').mailingServiceToOwner;
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
   extended: true
@@ -526,15 +528,15 @@ app.post('/confirm_fees_deposit', (req, res) => {
 
 
 
-  if (feesPaymentData.feesAmount == undefined || feesPaymentData.feesAmount == null || feesPaymentData.feesAmount.length == 0 ||!feesPaymentData.feesAmount.match(/^[0-9]+$/)) {
+  if (feesPaymentData.feesAmount == undefined || feesPaymentData.feesAmount == null || feesPaymentData.feesAmount.length == 0 || !feesPaymentData.feesAmount.match(/^[0-9]+$/)) {
     res.send({
       success: false,
       error: true,
       errorMesage: "Fees Amount not entered or not numberic"
     });
     return;
-  }else{
-    feesPaymentData.feesAmount=parseInt(feesPaymentData.feesAmount);
+  } else {
+    feesPaymentData.feesAmount = parseInt(feesPaymentData.feesAmount);
   }
 
   if (feesPaymentData.paymentDate == undefined || feesPaymentData.paymentDate == null || feesPaymentData.paymentDate.length == 0) {
@@ -1399,7 +1401,7 @@ app.get('/getTotalActiveStudentsFromYear/:year', (req, res) => {
     var dbo = db.db("FeesBakya");
     dbo.collection("student_details").find({
       active: true
-    }, function (err, result) {
+    }).toArray(function (err, result) {
       if (err) {
         res.send({
           error: true,
@@ -1412,13 +1414,13 @@ app.get('/getTotalActiveStudentsFromYear/:year', (req, res) => {
       //it is assumed that some of the students will be active there
       var countTotalInYr = 0;
       for (let i = 0; i < result.length; i++) {
-        if (parseInt(Date(result[i].doe).getFullYear().toString()) <= parseInt(yr)) {
+        if (parseInt(new Date(result[i].doe).getFullYear().toString()) <= parseInt(yr)) {
           countTotalInYr += 1;
         }
       }
       dbo.collection("student_details").find({
         active: false
-      }, function (err, reslt) {
+      }).toArray(function (err, reslt) {
         if (err) {
           res.send({
             error: true,
@@ -1472,7 +1474,7 @@ app.get('/getFeesCollectedInYear/:year', (req, res) => {
       throw err
     };
     var dbo = db.db("FeesBakya");
-    dbo.collection("fees_submission_details").find({}, function (err, result) {
+    dbo.collection("fees_submission_details").find().toArray(function (err, result) {
       if (err) {
         res.send({
           error: true,
@@ -1553,7 +1555,7 @@ app.post('/getStudentDetails', (req, res) => {
           if ((rollnumber !== null) && (results[i].rollnumber == rollnumber)) {
             console.log("Get details roll number matched!!")
             students_found.push(results[i]);
-          } else if ((name!=undefined && name !== null && name.length!=0) && (results[i].student_name.indexOf(name) > -1 || (name !== undefined && name !== null && name.length != 0 && name.indexOf(results[i].student_name) > -1))) {
+          } else if ((name != undefined && name !== null && name.length != 0) && (results[i].student_name.indexOf(name) > -1 || (name !== undefined && name !== null && name.length != 0 && name.indexOf(results[i].student_name) > -1))) {
             students_found.push(results[i]);
           } else if ((classs !== null) && (classs !== undefined && classs !== null && classs == results[i].classs)) {
             students_found.push(results[i]);
@@ -1602,7 +1604,7 @@ app.post('/getDefaultersDetails', (req, res) => {
       throw err
     };
     var dbo = db.db("FeesBakya");
-    dbo.collection("students_balance_sheet").find().toArray( function (err, result) { //just fetch all students
+    dbo.collection("students_balance_sheet").find().toArray(function (err, result) { //just fetch all students
       if (err) {
         res.send({
           error: true,
@@ -1612,9 +1614,9 @@ app.post('/getDefaultersDetails', (req, res) => {
         throw err;
       }
       console.log(result);
-       
+
       for (let i = 0; i < result.length; i++) {
-        if (parseInt(result[i].amountTotal) < 0 ) {
+        if (parseInt(result[i].amountTotal) < 0) {
           defaulters.push({
             rollnumber: result[i].rollnumber,
             amount: result[i].amountTotal
@@ -1622,8 +1624,8 @@ app.post('/getDefaultersDetails', (req, res) => {
         }
       }
       //find the student details
-      
-      dbo.collection("student_details").find().toArray( function (errors, resultt) {
+
+      dbo.collection("student_details").find().toArray(function (errors, resultt) {
         if (errors) {
           res.send({
             error: true,
@@ -1632,22 +1634,22 @@ app.post('/getDefaultersDetails', (req, res) => {
           });
           throw errors;
         }
-        for(let j=0;j<defaulters.length;j++){
-        for (let i = 0; i < resultt.length; i++) {
-          if (defaulters[j].rollnumber == resultt[i].rollnumber) {
-            defaulters[j]['details'] = resultt[i];
-            continue;
+        for (let j = 0; j < defaulters.length; j++) {
+          for (let i = 0; i < resultt.length; i++) {
+            if (defaulters[j].rollnumber == resultt[i].rollnumber) {
+              defaulters[j]['details'] = resultt[i];
+              continue;
+            }
           }
         }
-      }
 
-      let finalResult=[];
-      for(let i=0;i<defaulters.length;i++){
-        if(defaulters[i].details.classs==classs || defaulters[i].details.rollnumber==rollnumber || (name!==undefined && name!==null && name.length!=0 && defaulters[i].details.student_name.indexOf(name.toUpperCase()) > -1) ){
-          
-          finalResult.push(defaulters[i]);
+        let finalResult = [];
+        for (let i = 0; i < defaulters.length; i++) {
+          if (defaulters[i].details.classs == classs || defaulters[i].details.rollnumber == rollnumber || (name !== undefined && name !== null && name.length != 0 && defaulters[i].details.student_name.indexOf(name.toUpperCase()) > -1)) {
+
+            finalResult.push(defaulters[i]);
+          }
         }
-      }
         res.send({
           success: true,
           error: false,
@@ -1688,7 +1690,7 @@ app.post('/allTransactions', (req, res) => {
     var dbo = db.db("FeesBakya");
     dbo.collection("fees_submission_details").find({
       rollnumber: rollnumber
-    }).toArray( function (err, result) { //just fetch all students
+    }).toArray(function (err, result) { //just fetch all students
       if (err) {
         res.send({
           error: true,
@@ -1705,7 +1707,7 @@ app.post('/allTransactions', (req, res) => {
       }
       dbo.collection("balance_credit_debit_details").find({
         rollnumber: rollnumber
-      }).toArray( function (errr, resultt) { //just fetch all students
+      }).toArray(function (errr, resultt) { //just fetch all students
         if (errr) {
           res.send({
             error: true,
@@ -1722,9 +1724,9 @@ app.post('/allTransactions', (req, res) => {
         }
 
         res.send({
-          error:false,
-          success:true,
-          successMessage:"Found All Transactions of Given Rollnumber",
+          error: false,
+          success: true,
+          successMessage: "Found All Transactions of Given Rollnumber",
           allTransactions
         })
         db.close();
@@ -1765,7 +1767,7 @@ app.get('/currentFeesRule/:classs', (req, res) => {
     var dbo = db.db("FeesBakya");
     dbo.collection("fees_rules_details").find({
       classs: classSpecified
-    }, function (err, result) {
+    }).toArray(function (err, result) {
       if (err) {
         res.send({
           error: true,
@@ -1805,7 +1807,7 @@ app.get('/allFeesRules', (req, res) => {
       throw err
     };
     var dbo = db.db("FeesBakya");
-    dbo.collection("fees_rules_details").find({}, function (err, result) {
+    dbo.collection("fees_rules_details").find().toArray(function (err, result) {
       if (err) {
         res.send({
           error: true,
@@ -1938,7 +1940,7 @@ app.get('/getTotalDefaulters', (req, res) => {
       throw err
     };
     var dbo = db.db("FeesBakya");
-    dbo.collection("students_balance_sheet").find({}, (errr, result) => {
+    dbo.collection("students_balance_sheet").find().toArray((errr, result) => {
       if (errr) {
         res.send({
           error: true,
@@ -1982,7 +1984,7 @@ app.get('/getTotalFeesPayers', (req, res) => {
     var dbo = db.db("FeesBakya");
     dbo.collection("students_balance_sheet").find({
       active: true
-    }, (errr, result) => {
+    }).toArray((errr, result) => {
       if (errr) {
         res.send({
           error: true,
@@ -2022,7 +2024,7 @@ app.get('/thisMonthFeesCollection', function (req, res) {
       throw err
     };
     var dbo = db.db("FeesBakya");
-    dbo.collection("fees_submission_details").find({}, (errr, result) => {
+    dbo.collection("fees_submission_details").find().toArray((errr, result) => {
       if (errr) {
         res.send({
           error: true,
@@ -2032,7 +2034,7 @@ app.get('/thisMonthFeesCollection', function (req, res) {
         throw errr;
       }
       for (let i = 0; i < result.length; i++) {
-        let feesSubmissionDate = Date(result[i].paymentDate);
+        let feesSubmissionDate = new Date(result[i].paymentDate);
         if (feesSubmissionDate.getMonth() == thisMonth && feesSubmissionDate.getFullYear() == thisYear) {
           collectionAmount += parseInt(result[i].feesAmount);
         }
@@ -2052,7 +2054,7 @@ app.get('/thisMonthFeesCollection', function (req, res) {
 
 
 
-app.get('/estimatedFeesCollectionThisMonth', function (req, res) {
+app.get('/estimatedFeesCollectionThisMonth', function (req, res) { // this will fail
   //for this go to the balancesheet check for all students , jo active hain balance sheet mein sirf unko hi 
   let classVar = {
     'Nursery': 0,
@@ -2084,7 +2086,7 @@ app.get('/estimatedFeesCollectionThisMonth', function (req, res) {
     var dbo = db.db("FeesBakya");
     dbo.collection("students_balance_sheet").find({
       active: true
-    }, (errr, result) => {
+    }).toArray((errr, result) => {
       if (errr) {
         res.send({
           error: true,
@@ -2110,7 +2112,7 @@ app.get('/estimatedFeesCollectionThisMonth', function (req, res) {
         var dbo = db.db("FeesBakya");
         dbo.collection("fees_rules_details").find({
           active: true
-        }, (errror, resultt) => {
+        }).toArray((errror, resultt) => {
           if (errror) {
             res.send({
               error: true,
@@ -2145,21 +2147,148 @@ app.get('/estimatedFeesCollectionThisMonth', function (req, res) {
 
 
 //get request for authentication end point
-app.get("/authenticate",(req,res)=>{
+app.get("/authenticate", (req, res) => {
 
-var imagekit = new ImageKit({
-    publicKey : "public_8PFAM11+fdiUFyUXnMIIsr9TP5s=",
-    privateKey : "private_Xi54goaDutcdi3jQ+dm3JImQFQA=",
-    urlEndpoint : "https://ik.imagekit.io/Dhankhar7924/"
+  var imagekit = new ImageKit({
+    publicKey: "public_8PFAM11+fdiUFyUXnMIIsr9TP5s=",
+    privateKey: "private_Xi54goaDutcdi3jQ+dm3JImQFQA=",
+    urlEndpoint: "https://ik.imagekit.io/Dhankhar7924/"
+  });
+
+
+  var authenticationParameters = imagekit.getAuthenticationParameters();
+  console.log(authenticationParameters);
+
+  res.send(authenticationParameters);
+
+
 });
 
+////make a schedule here for increasing fees for every first date of every month
 
-var authenticationParameters = imagekit.getAuthenticationParameters();
-console.log(authenticationParameters);
 
-res.send(authenticationParameters);
+var rule = new schedule.RecurrenceRule();
+//time jo hai wo apne ko standard IST wala Dalna hai
+rule.second = 0;
+rule.minute = 0;
+rule.date = 1;
+rule.hour = 10;
+var j = schedule.scheduleJob(rule, function () {
 
+  //now from database get the available fees rules
+  //then for each active student in balance sheet add fees as negative and add them to the transaction database as well
+  MongoClient.connect(url, function (err, db) {
+    if (err) {
+      console.log("Error while executing Monthly Service for Fees update!!");
+      throw err
+    };
+    var dbo = db.db("FeesBakya");
+    dbo.collection("fees_rules_details").find({
+      active: true
+    }).toArray((err, result) => {
+      if (err) {
+        console.log("Error While executing the monthly service for Fees Update!!");
+        throw err;
+      }
+
+      //result will be an array
+      //with each element having attributes _id , classs , dateOfImplementation , feesAmount , active , endDate
+      let classFees = [];
+      for (let i = 0; i < result.length; i++) {
+        let newClass = {
+          amount: parseInt(result[i].feesAmount),
+          classs: result[i].classs
+        }
+        classFees.push(newClass);
+      }
+
+      //now make connection to the students_balance_sheet
+      //find and update query for each class active students
+
+      MongoClient.connect(url, function (err, db) {
+        if (err) {
+          console.log("Error while executing Monthly Service for Fees update!!");
+          throw err
+        };
+        var dbo = db.db("FeesBakya");
+        for (let i = 0; i < classFees.length; i++) {
+          dbo.collection("students_balance_sheet").updateMany({
+            classs: classFees[i].classs,
+            active: true
+          }, {
+            $inc: {
+              amountTotal: -classFees[i].amount
+            }
+          }, (err, result) => {
+            if (err) {
+              console.log("Error while updating fees through time interval execution");
+              throw err;
+            }
+            //now we have to find those who are active in that class
+            // and then update there transaction ledger in transaction collection
+
+
+            dbo.collection("students_balance_sheet").find({
+              active: true,
+              classs: classFees[i].classs
+            }).toArray((err, students) => {
+
+              if (err) {
+                console.log("Error while finding the active students in class while executing the primary fees update service");
+                throw err;
+              }
+              for (let j = 0; j < students.length; j++) {
+                dbo.collection("balance_credit_debit_details").insertOne({
+                  rollnumber: students[j].rollnumber,
+                  amount: -classFees[i].amount,
+                  comment: "Fees imposed for month " + new Date().getMonth() + " for year " + new Date().getFullYear(),
+                  take_or_give: "take",
+                  paymentDate: new Date().toUTCString()
+                }, (error, response) => {
+                  if (error) {
+                    console.log("error while updating transaction ledger in monthly fees update execution service");
+                    throw error;
+                  }
+                  //before closing this write a mail to owner about imposed fees
+
+                  //close db here and make MongoClient connection again in next for loop
+                  db.close();
+                });
+              }
+
+              mailingServiceToOwner(students, classFees[i]);
+
+              console.log("Balance sheet updated and transactions added for all Students of class " + classFees[i].classs + ". Next Invocation will be on " + new Date(j.nextInvocation()));
+
+
+            });
+
+
+          });
+        }
+      });
+    });
+
+  });
 
 });
+console.log(new Date(j.nextInvocation()), new Date());
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 app.listen(port, () => console.log(`Listening on port ${port}`));
