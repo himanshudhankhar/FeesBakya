@@ -71,7 +71,7 @@ if(err){
             }
             var mailOptions = {
                 from: 'dhankhar7924@gmail.com',
-                to: 'dhankhar.1@iitj.ac.in',
+                to: ['dhankhar.1@iitj.ac.in'],
                 subject: 'Fees imposed Rs ' + classFees.amount + ' for date ' + new Date().toDateString(),
                 text: studentNamesAndRollnumbers
             };

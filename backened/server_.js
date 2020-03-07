@@ -14,6 +14,7 @@ const port = process.env.PORT || 5000;
 var validator = require('aadhaar-validator')
 var schedule = require('node-schedule');
 var mailingServiceToOwner = require('./mailingService').mailingServiceToOwner;
+const path = require('path');
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
   extended: true
@@ -23,8 +24,11 @@ app.use(function (req, res, next) {
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
   next();
 });
+app.use(express.static(path.join(__dirname, 'build')));
 
-
+app.get('/', function (req, res) {
+  res.sendFile(path.join(__dirname, 'build', 'index.html'));
+});
 async function rollnumberCheck(rollnumber) {
   if (rollnumber == undefined || rollnumber == null || !validRollNumber(rollnumber)) {
     return false;
@@ -2241,7 +2245,7 @@ var j = schedule.scheduleJob(rule, function () {
                 dbo.collection("balance_credit_debit_details").insertOne({
                   rollnumber: students[j].rollnumber,
                   amount: -classFees[i].amount,
-                  comment: "Fees imposed for month " + new Date().getMonth() + " for year " + new Date().getFullYear(),
+                  comment: "Fees imposed for month " + (new Date().getMonth()+1) + " for year " + new Date().getFullYear(),
                   take_or_give: "take",
                   paymentDate: new Date().toUTCString()
                 }, (error, response) => {
