@@ -14,6 +14,7 @@ const port = process.env.PORT || 5000;
 var validator = require('aadhaar-validator')
 var schedule = require('node-schedule');
 var mailingServiceToOwner = require('./mailingService').mailingServiceToOwner;
+var dbCreation = require('./dbcreation').dbCreation;
 const path = require('path');
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
@@ -29,6 +30,21 @@ app.use(express.static(path.join(__dirname, 'build')));
 app.get('/', function (req, res) {
   res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
+
+
+dbCreation();
+
+
+
+function sleep(miliseconds) {
+  var currentTime = new Date().getTime();
+
+  while (currentTime + miliseconds >= new Date().getTime()) {
+  }
+}
+
+sleep(5000);
+
 async function rollnumberCheck(rollnumber) {
   if (rollnumber == undefined || rollnumber == null || !validRollNumber(rollnumber)) {
     return false;
