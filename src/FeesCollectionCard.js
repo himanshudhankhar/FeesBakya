@@ -14,11 +14,22 @@ function abs(aaa){
 }
 
 
-let urlThisMonthCollection="http://localhost:5000/thisMonthFeesCollection";
-let urlEstimatedCollection="http://localhost:5000/estimatedFeesCollectionThisMonth";
 export default class FeesCollectionCard extends React.Component{
+    baseURL="";
+  urlThisMonthCollection="/thisMonthFeesCollection";
+  urlEstimatedCollection="/estimatedFeesCollectionThisMonth";
 constructor(props){
     super(props);
+
+if(process.env.NODE_ENV=="development"){
+    this.baseURL="http://localhost:5000";
+}else{
+    this.baseURL = "https://ekta-high-school.herokuapp.com";
+}
+
+this.urlEstimatedCollection = this.baseURL + this.urlEstimatedCollection;
+this.urlThisMonthCollection = this.baseURL + this.urlThisMonthCollection;
+
     this.state={
         thisMonthCollection:0,
         estimationCollection:0,
@@ -29,9 +40,9 @@ constructor(props){
 
 updateCard(){
     let self = this;
-    axios.get(urlThisMonthCollection).then(function(response){
+    axios.get(self.urlThisMonthCollection).then(function(response){
 let collectedAmount = parseInt(response.data.collectionAmount);
-axios.get(urlEstimatedCollection).then(function(responsee){
+axios.get(self.urlEstimatedCollection).then(function(responsee){
     let estimatedCollection  = parseInt(responsee.data.feesToBeCollected);
     self.setState({
         thisMonthCollection:collectedAmount,
@@ -47,9 +58,9 @@ console.log(error);
 }
 componentDidMount(){
     let self = this;
-    axios.get(urlThisMonthCollection).then(function(response){
+    axios.get(self.urlThisMonthCollection).then(function(response){
 let collectedAmount = parseInt(response.data.collectionAmount);
-axios.get(urlEstimatedCollection).then(function(responsee){
+axios.get(self.urlEstimatedCollection).then(function(responsee){
     let estimatedCollection  = parseInt(responsee.data.feesToBeCollected);
     self.setState({
         thisMonthCollection:collectedAmount,

@@ -13,9 +13,17 @@ import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import { Select,Button } from '@material-ui/core';
 export default class DefaultersTab extends React.Component{
 
-
+baseURL = "";
 constructor(props){
     super(props);
+
+if(process.env.NODE_ENV=="development"){
+  this.baseURL = "http://localhost:5000";
+}else{
+  this.baseURL = "https://ekta-high-school.herokuapp.com";
+}
+
+
     this.state={
         openDefaulters:false,
         defaultersFetched:[{
@@ -149,7 +157,7 @@ handleExpansionFeesDetails(value){
   }
   
   let self = this;  
-  axios.post("http://localhost:5000/allTransactions",{rollnumber:value.rollnumber}).then(response=>{
+  axios.post(self.baseURL + "/allTransactions",{rollnumber:value.rollnumber}).then(response=>{
 console.log(response.data);
 if(response.data.success==true){
 let exp = self.expandedFeesDetails;
@@ -226,7 +234,7 @@ if(((rollNumber==undefined||rollNumber==null||rollNumber.length==0))&&((classs==
   return;
 }
 let self =this;
-axios.post("http://localhost:5000/getDefaultersDetails",{
+axios.post(self.baseURL + "/getDefaultersDetails",{
    rollnumber:rollNumber,
    classs,studentName
 }).then(response=>{

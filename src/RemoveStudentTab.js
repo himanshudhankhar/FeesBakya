@@ -12,8 +12,17 @@ import ErrorDialog from './ErrorDialog';
 import { Scrollbars } from 'react-custom-scrollbars';
 
 export default class RemoveStudentTab extends React.Component{
+  baseURL ="";
 constructor(props){
     super(props);
+
+if(process.env.NODE_ENV=="development"){
+  this.baseURL = "http://localhost:5000"
+}else{
+  this.baseURL = "https://ekta-high-school.herokuapp.com";
+}
+
+
     this.state={
         openRemoveStudentDialog:false,
         successDialog:false,
@@ -84,7 +93,7 @@ if(studentRollNumber==null||studentRollNumber==undefined||studentRollNumber.leng
   return;
 }
 let self =this;
-axios.post("http://localhost:5000/getStudentDetails",{query:{
+axios.post( self.baseURL +  "/getStudentDetails",{query:{
   rollnumber:studentRollNumber
 }}).then(response=>{
   let outPut = response.data;
@@ -136,7 +145,7 @@ if(outPut.students_found==undefined||outPut.students_found==null||outPut.student
 
 handleConfirmRemove(){
   let self =this;
-  axios.post("http://localhost:5000/removeStudentConfirmation",{removedStudentDetails:{
+  axios.post(self.baseURL + "/removeStudentConfirmation",{removedStudentDetails:{
       rollnumber:self.state.studentDetails.rollnumber
   }}).then(response => {
     console.log(response);

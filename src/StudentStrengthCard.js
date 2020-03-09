@@ -4,7 +4,6 @@ import Card from '@material-ui/core/Card';
 import Typography from '@material-ui/core/Typography';
 import SvgIcon from '@material-ui/core/SvgIcon';
 import axios from 'axios';
-var getUrl = 'http://localhost:5000/getTotalActiveStudentsFromYear';
 
 //make a backened call to server for total students strength
 
@@ -17,8 +16,18 @@ function abs(aaa){
 }
 
 export default class StudentStrengthCard extends React.Component{
+    getUrl = '/getTotalActiveStudentsFromYear';
+    baseURL ="";
 constructor(props){
     super(props);
+  if(process.env.NODE_ENV =="development"){
+    this.baseURL= "http://localhost:5000";
+  }else{
+    this.baseURL = "https://ekta-high-school.herokuapp.com";
+  }
+
+  this.getUrl = this.baseURL + this.getUrl;
+
     this.state={
 thisYearStrength:0,
 previousYearStrength:1,
@@ -34,12 +43,12 @@ getStrength(){
     var self =this;
     let thisYearStrength=0;
 let previousYearStrength=0;
-    axios.get(getUrl+"/"+new Date().getFullYear(),)
+    axios.get(self.getUrl+"/"+new Date().getFullYear(),)
   .then(function (response) {
     // handle success
     console.log(response);
        thisYearStrength = response.data.count;
-     axios.get(getUrl+"/"+ (new Date().getFullYear()-1))
+     axios.get(self.getUrl+"/"+ (new Date().getFullYear()-1))
   .then(function (response) {
        previousYearStrength = response.data.count;
        self.setState({
@@ -63,12 +72,12 @@ componentDidMount(){
 let thisYearStrength=0;
 let previousYearStrength=0;
 var self =this;
-    axios.get(getUrl+"/"+new Date().getFullYear())
+    axios.get(self.getUrl+"/"+new Date().getFullYear())
   .then(function (response) {
     // handle success
     console.log(response);
        thisYearStrength = response.data.count;
-     axios.get(getUrl+"/"+ (new Date().getFullYear()-1))
+     axios.get(self.getUrl+"/"+ (new Date().getFullYear()-1))
   .then(function (response) {
        previousYearStrength = response.data.count;
        self.setState({

@@ -5,7 +5,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 var MongoClient = require('mongodb').MongoClient;
-var url = "mongodb://localhost:27017/";
+var url = 'mongodb://admin:dhankhar7924@ds139946.mlab.com:39946/feesbakya';
 var ImageKit = require("imagekit");
 const app = express();
 var series = require('async/series');
@@ -79,7 +79,7 @@ async function rollnumberCheck(rollnumber) {
         })
         throw err;
       }
-      var dbo = db.db("FeesBakya");
+      var dbo = db.db("feesbakya");
 
       dbo.collection("class_rollnumber_record").findOne({
         classs: classs
@@ -118,7 +118,7 @@ function abs(value) {
 function updateClassRollNumberRecordByOne(classs) {
   MongoClient.connect(url, function (err, db) {
     if (err) throw err;
-    var dbo = db.db("FeesBakya");
+    var dbo = db.db("feesbakya");
     dbo.collection("class_rollnumber_record").updateOne({
       "classs": classs
     }, {
@@ -447,7 +447,7 @@ app.post('/register_student', (req, res) => {
         //here check if that rollnumber exists or not in database
         MongoClient.connect(url, function (err, db) {
           if (err) throw err;
-          var dbo = db.db("FeesBakya");
+          var dbo = db.db("feesbakya");
           var rollNumber = student_details.rollnumber;
           dbo.collection("student_details").findOne({
             "rollnumber": rollNumber
@@ -492,7 +492,7 @@ app.post('/register_student', (req, res) => {
       }
       MongoClient.connect(url, function (err, db) {
         if (err) throw err;
-        var dbo = db.db("FeesBakya");
+        var dbo = db.db("feesbakya");
         var myobj = student_details;
         dbo.collection("student_details").insertOne(myobj, function (err, resp) {
           if (err) {
@@ -601,7 +601,7 @@ app.post('/confirm_fees_deposit', (req, res) => {
 
     MongoClient.connect(url, function (err, db) {
       if (err) throw err;
-      var dbo = db.db("FeesBakya");
+      var dbo = db.db("feesbakya");
       var myobj = feesPaymentData;
       dbo.collection("fees_submission_details").insertOne(myobj, function (err, resp) {
         if (err) {
@@ -680,7 +680,7 @@ app.post('/add_fees_rule', (req, res) => {
 
   MongoClient.connect(url, function (err, db) {
     if (err) throw err;
-    var dbo = db.db("FeesBakya");
+    var dbo = db.db("feesbakya");
     var myparams = {
       classs: feesRuleData.classs,
       active: true
@@ -805,7 +805,7 @@ app.post('/deposit_balance', (req, res) => {
     //check whether that rollnumber exists or not;
     MongoClient.connect(url, function (err, db) {
       if (err) throw err;
-      var dbo = db.db("FeesBakya");
+      var dbo = db.db("feesbakya");
       var myobj = depositExtraBalance;
       //you have to make it positive or negative
       if (myobj.take_or_give == "take") {
@@ -878,7 +878,7 @@ app.post('/removeStudentConfirmation', (req, res) => {
 
   MongoClient.connect(url, function (err, db) {
     if (err) throw err;
-    var dbo = db.db("FeesBakya");
+    var dbo = db.db("feesbakya");
     var myparams = {
       rollnumber: removedStudentDetails.rollnumber
     };
@@ -961,7 +961,7 @@ app.post('/add_new_academic_session', (req, res) => {
 
   MongoClient.connect(url, function (err, db) {
     if (err) throw err;
-    var dbo = db.db("FeesBakya");
+    var dbo = db.db("feesbakya");
     var myparams = {
       classs: newAcadmeicSession.classs,
     };
@@ -1032,7 +1032,7 @@ app.post('/modifyStudentDetails', (req, res) => {
 
   MongoClient.connect(url, function (err, db) {
     if (err) throw err;
-    var dbo = db.db("FeesBakya");
+    var dbo = db.db("feesbakya");
     var myparams = {
       rollnumber: modifyStudentDetails.rollnumber
     };
@@ -1085,7 +1085,7 @@ app.post('/deleteAddedFeesRule', (req, res) => {
 
   MongoClient.connect(url, function (err, db) {
     if (err) throw err;
-    var dbo = db.db("FeesBakya");
+    var dbo = db.db("feesbakya");
     var myparams = {
       classs: deleteAddedFeesRule.classs,
       active: true
@@ -1144,7 +1144,7 @@ app.post('/deleteAddedAcademicSessionRule', (req, res) => {
 
   MongoClient.connect(url, function (err, db) {
     if (err) throw err;
-    var dbo = db.db("FeesBakya");
+    var dbo = db.db("feesbakya");
     var myparams = {
       classs: deleteAddedAcademicSessionRule.classs,
       active: true
@@ -1227,7 +1227,7 @@ app.get('/isRollNumberAvailable/:rollnumber', (req, res) => {
       });
       throw err
     };
-    var dbo = db.db("FeesBakya");
+    var dbo = db.db("feesbakya");
     dbo.collection("class_rollnumber_record").findOne({
       classs: classes[rollnumber.substr(0, 2)]
     }, function (err, result) {
@@ -1346,7 +1346,7 @@ app.get('/getRollNumber/:classs/:year(\\d+)/', (req, res) => {
       });
       throw err
     };
-    var dbo = db.db("FeesBakya");
+    var dbo = db.db("feesbakya");
     dbo.collection("class_rollnumber_record").findOne({
       classs: varr
     }, function (err, result) {
@@ -1418,7 +1418,7 @@ app.get('/getTotalActiveStudentsFromYear/:year', (req, res) => {
       });
       throw err
     };
-    var dbo = db.db("FeesBakya");
+    var dbo = db.db("feesbakya");
     dbo.collection("student_details").find({
       active: true
     }).toArray(function (err, result) {
@@ -1493,7 +1493,7 @@ app.get('/getFeesCollectedInYear/:year', (req, res) => {
       });
       throw err
     };
-    var dbo = db.db("FeesBakya");
+    var dbo = db.db("feesbakya");
     dbo.collection("fees_submission_details").find().toArray(function (err, result) {
       if (err) {
         res.send({
@@ -1554,7 +1554,7 @@ app.post('/getStudentDetails', (req, res) => {
       });
       throw err
     };
-    var dbo = db.db("FeesBakya");
+    var dbo = db.db("feesbakya");
     dbo.collection("student_details").find().toArray(
       function (err, results) { //just fetch all students
         if (err) {
@@ -1623,7 +1623,7 @@ app.post('/getDefaultersDetails', (req, res) => {
       });
       throw err
     };
-    var dbo = db.db("FeesBakya");
+    var dbo = db.db("feesbakya");
     dbo.collection("students_balance_sheet").find().toArray(function (err, result) { //just fetch all students
       if (err) {
         res.send({
@@ -1707,7 +1707,7 @@ app.post('/allTransactions', (req, res) => {
       });
       throw err
     };
-    var dbo = db.db("FeesBakya");
+    var dbo = db.db("feesbakya");
     dbo.collection("fees_submission_details").find({
       rollnumber: rollnumber
     }).toArray(function (err, result) { //just fetch all students
@@ -1784,7 +1784,7 @@ app.get('/currentFeesRule/:classs', (req, res) => {
       });
       throw err
     };
-    var dbo = db.db("FeesBakya");
+    var dbo = db.db("feesbakya");
     dbo.collection("fees_rules_details").find({
       classs: classSpecified
     }).toArray(function (err, result) {
@@ -1826,7 +1826,7 @@ app.get('/allFeesRules', (req, res) => {
       });
       throw err
     };
-    var dbo = db.db("FeesBakya");
+    var dbo = db.db("feesbakya");
     dbo.collection("fees_rules_details").find().toArray(function (err, result) {
       if (err) {
         res.send({
@@ -1894,7 +1894,7 @@ app.post("/changeClassStudent", (req, res) => {
       });
       throw err
     };
-    var dbo = db.db("FeesBakya");
+    var dbo = db.db("feesbakya");
     dbo.collection("student_details").updateOne({
       rollnumber: studentDetails.rollnumber
     }, {
@@ -1959,7 +1959,7 @@ app.get('/getTotalDefaulters', (req, res) => {
       });
       throw err
     };
-    var dbo = db.db("FeesBakya");
+    var dbo = db.db("feesbakya");
     dbo.collection("students_balance_sheet").find().toArray((errr, result) => {
       if (errr) {
         res.send({
@@ -2001,7 +2001,7 @@ app.get('/getTotalFeesPayers', (req, res) => {
       });
       throw err
     };
-    var dbo = db.db("FeesBakya");
+    var dbo = db.db("feesbakya");
     dbo.collection("students_balance_sheet").find({
       active: true
     }).toArray((errr, result) => {
@@ -2043,7 +2043,7 @@ app.get('/thisMonthFeesCollection', function (req, res) {
       });
       throw err
     };
-    var dbo = db.db("FeesBakya");
+    var dbo = db.db("feesbakya");
     dbo.collection("fees_submission_details").find().toArray((errr, result) => {
       if (errr) {
         res.send({
@@ -2103,7 +2103,7 @@ app.get('/estimatedFeesCollectionThisMonth', function (req, res) { // this will 
       });
       throw err
     };
-    var dbo = db.db("FeesBakya");
+    var dbo = db.db("feesbakya");
     dbo.collection("students_balance_sheet").find({
       active: true
     }).toArray((errr, result) => {
@@ -2129,7 +2129,7 @@ app.get('/estimatedFeesCollectionThisMonth', function (req, res) { // this will 
           });
           throw err
         };
-        var dbo = db.db("FeesBakya");
+        var dbo = db.db("feesbakya");
         dbo.collection("fees_rules_details").find({
           active: true
         }).toArray((errror, resultt) => {
@@ -2202,7 +2202,7 @@ var j = schedule.scheduleJob(rule, function () {
       console.log("Error while executing Monthly Service for Fees update!!");
       throw err
     };
-    var dbo = db.db("FeesBakya");
+    var dbo = db.db("feesbakya");
     dbo.collection("fees_rules_details").find({
       active: true
     }).toArray((err, result) => {
@@ -2230,7 +2230,7 @@ var j = schedule.scheduleJob(rule, function () {
           console.log("Error while executing Monthly Service for Fees update!!");
           throw err
         };
-        var dbo = db.db("FeesBakya");
+        var dbo = db.db("feesbakya");
         for (let i = 0; i < classFees.length; i++) {
           dbo.collection("students_balance_sheet").updateMany({
             classs: classFees[i].classs,

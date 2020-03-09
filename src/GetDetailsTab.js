@@ -29,9 +29,16 @@ const useStyles = makeStyles(theme => ({
   },
 }));
 export default class GetDetailsTab extends React.Component{
-    
+    baseURL ="";
     constructor(props){
         super(props);
+
+if(process.env.NODE_ENV=="development"){
+  this.baseURL = "http://localhost:5000";
+}else{
+  this.baseURL = "https://ekta-high-school.herokuapp.com";
+}
+
         this.state={
             searchDialog:false,
             expanded:"none",
@@ -111,7 +118,7 @@ if(name.trim()==""){
   name=null;
 }
 let self =this;
-axios.post("http://localhost:5000/getStudentDetails",{query:{
+axios.post(self.baseURL +  "/getStudentDetails",{query:{
   rollnumber,classs,name
 }}).then(response=>{
 

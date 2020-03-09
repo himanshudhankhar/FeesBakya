@@ -3,12 +3,23 @@ import Card from '@material-ui/core/Card';
 import Typography from '@material-ui/core/Typography';
 import SvgIcon from '@material-ui/core/SvgIcon';
 import axios from 'axios';
-let urlTotalDefaulters="http://localhost:5000/getTotalDefaulters";
-let urlTotalFeesPayers="http://localhost:5000/getTotalFeesPayers";
 
 export default class FeesDefaultersCard extends React.Component{
+      urlTotalDefaulters="/getTotalDefaulters";
+  urlTotalFeesPayers="/getTotalFeesPayers";
+baseURL = "";
 constructor(props){
     super(props);
+
+if(process.env.NODE_ENV=="development"){
+    this.baseURL ="http://localhost:5000";
+}else{
+    this.baseURL = "https://ekta-high-school.herokuapp.com";
+}
+
+this.urlTotalDefaulters = this.baseURL + this.urlTotalDefaulters;
+this.urlTotalFeesPayers = this.baseURL + this.urlTotalFeesPayers;
+
     this.state={
         defaulters:0,
         tStudents:0,
@@ -22,11 +33,11 @@ updateCard(){
     var  self=this;
      var totalDefaulters=0;
      var totalFeesPayers=0;
-    axios.get(urlTotalDefaulters)
+    axios.get(self.urlTotalDefaulters)
     .then(function (response) {
         
         totalDefaulters = response.data.defaultersCount;
-        axios.get(urlTotalFeesPayers)
+        axios.get(self.urlTotalFeesPayers)
         .then(function (responses) {
             totalFeesPayers = responses.data.totalFeesPayers;
     self.setState({
@@ -53,10 +64,10 @@ componentDidMount(){
      var  self=this;
      var totalDefaulters=0;
      var totalFeesPayers=0;
-    axios.get(urlTotalDefaulters)
+    axios.get(self.urlTotalDefaulters)
     .then(function (response) {
         totalDefaulters = response.data.defaultersCount;
-        axios.get(urlTotalFeesPayers)
+        axios.get(self.urlTotalFeesPayers)
         .then(function (responses) {
             totalFeesPayers = responses.data.totalFeesPayers;
     self.setState({

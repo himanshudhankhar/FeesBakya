@@ -2,10 +2,9 @@ const MongoClient = require('mongodb').MongoClient;
 const assert = require('assert');
 
 // Connection URL
-const url = 'mongodb://localhost:27017';
 
 // Database Name
-const dbName = 'FeesBakaya';
+const dbName = 'feesbakaya';
 
 // Create a new MongoClient
 
@@ -67,17 +66,21 @@ var classRollnumberRecord = [
 module.exports = {
 
   dbCreation: function () {
-
-    MongoClient.connect(url, function (err, db) {
+   var url  = 'mongodb://admin:dhankhar7924@ds139946.mlab.com:39946/feesbakya';
+  
+    var count =0;
+    MongoClient.connect(url, {poolSize: 10, bufferMaxEntries: 0, reconnectTries: 5000, useNewUrlParser: true,useUnifiedTopology: true},function (err, db) {
       if (err) {
         console.log("Error while collecting collection names");
         throw err;
       }
+ 
 
-      var dbo = db.db("FeesBakya");
+      var dbo = db.db("feesbakya");
       dbo.collections().then(result => {
+        
         var collectionSet = new Set();
-        console.log("Already created collections!!");
+        console.log("Already created collections!!",result.lenth);
         for (let i = 0; i < result.length; i++) {
           console.log(result[i].collectionName);
           collectionSet.add(result[i].collectionName);
@@ -89,7 +92,12 @@ module.exports = {
           }).catch(err => {
             console.log("Error while creating Student Details.");
             throw err;
+          }).finally(function(){
+            count+=1;
           })
+        }else{
+          count+=1;
+          console.log(count);
         }
 
         if (!collectionSet.has("academic_sessions_increament_dates")) {
@@ -98,7 +106,12 @@ module.exports = {
           }).catch(err => {
             console.log("Error while creating Academic Session Increament Dates.");
             throw err;
+          }).finally(()=>{
+            count+=1;
           })
+        }else{
+          count+=1;
+          console.log(count);
         }
 
         if (!collectionSet.has("balance_credit_debit_details")) {
@@ -107,7 +120,12 @@ module.exports = {
           }).catch(err => {
             console.log("Error while creating balance_credit_debit_details.");
             throw err;
+          }).finally(()=>{
+            count+=1;
           })
+        }else{
+          count+=1;
+          console.log(count);
         }
 
         if (!collectionSet.has("class_rollnumber_record")) {
@@ -118,13 +136,18 @@ module.exports = {
             }).catch(error => {
               console.log("Error in initialisation of class rollnumber records!!", error);
               throw error;
-            })
+            }) 
 
 
           }).catch(err => {
             console.log("Error while creating class rollnumber records.", err);
             throw err;
+          }).finally(()=>{
+            count+=1;
           })
+        }else{
+          count+=1;
+          console.log(count);
         }
 
 
@@ -135,7 +158,12 @@ module.exports = {
           }).catch(err => {
             console.log("Error while creating fees_rules_details.");
             throw err;
+          }).finally(()=>{
+            count+=1;
           })
+        }else{
+          count+=1;
+          console.log(count);
         }
 
         if (!collectionSet.has("fees_submission_details")) {
@@ -144,7 +172,12 @@ module.exports = {
           }).catch(err => {
             console.log("Error while creating fees_submission_details.");
             throw err;
+          }).finally(()=>{
+            count+=1;
           })
+        }else{
+          count+=1;
+          console.log(count);
         }
 
 
@@ -154,7 +187,12 @@ module.exports = {
           }).catch(err => {
             console.log("Error while creating students_balance_sheet.");
             throw err;
+          }).finally(()=>{
+            count+=1;
           })
+        }else{
+          count+=1;
+          console.log(count);
         }
 
 
@@ -162,12 +200,20 @@ module.exports = {
       }).catch(err => {
         console.log(err);
       });
-      db.close();
-
+    
+      
+     setTimeout(function(err,result){
+       console.log(count);
+       db.close();
+     },15000);
+      
+      
 
     });
 
 
 
-  }
+  },
+  getUrl: 'mongodb://admin:dhankhar7924@ds139946.mlab.com:39946/feesbakya'
+
 }

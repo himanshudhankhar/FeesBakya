@@ -5,8 +5,16 @@ import axios from 'axios';
 import ErrorDialog from './ErrorDialog';
 import SuccessDialog from './SuccessDialog';
 export default class UpdateFeesTab extends React.Component{
-constructor(props){
+baseURL = "";
+  constructor(props){
   super(props);
+
+if(process.env.NODE_ENV=="development"){
+  this.baseURL ="http://localhost:5000";
+}else{
+  this.baseURL ="https://ekta-high-school.herokuapp.com";
+}
+
   this.state={
     feesImplementationDate:new Date(),
     feesRule:{},
@@ -92,7 +100,7 @@ if(take_or_give=="Choose"){
 }
 //payment date is correctly choosen;
 let self =this;
-axios.post("http://localhost:5000/deposit_balance",{depositExtraBalance:{
+axios.post(self.baseURL +   "/deposit_balance",{depositExtraBalance:{
   rollnumber,amount,comment,take_or_give,paymentDate
 }}).then(response=>{
   let data = response.data;
@@ -136,7 +144,7 @@ if(amountFeesImplemented==undefined||amountFeesImplemented==null||amountFeesImpl
 }
 //make a post request to 
 let self= this;
-axios.post('http://localhost:5000/add_fees_rule',{feesRuleData:{
+axios.post(self.baseURL  + '/add_fees_rule',{feesRuleData:{
   classs:classSelected,
   dateOfImplementation,
   feesAmount:amountFeesImplemented
@@ -179,7 +187,7 @@ if(paymentAmount==undefined||paymentAmount==null||paymentAmount.length==0||!paym
   return;
 }
 let self =this;
-axios.post("http://localhost:5000/confirm_fees_deposit",{
+axios.post(  self.baseURL + "/confirm_fees_deposit",{
   feesPaymentData:{
     feesAmount:paymentAmount,
     rollnumber:paymentRollnumber,

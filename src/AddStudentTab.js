@@ -16,9 +16,17 @@ const ImageKit = require('imagekit-javascript');
 const pjson = require('../package.json');
 
 class AddStudentTab extends React.Component{
- registerStudentUrl = "http://localhost:5000/register_student";
+ registerStudentUrl = "";
+ baseURL="";
 constructor(props){
     super(props);
+// console.log(process.env.NODE_ENV);
+if(process.env.NODE_ENV=="development"){
+  this.baseURL = "http://localhost:5000";
+}else{
+  this.baseURL = "https://ekta-high-school.herokuapp.com";
+}
+this.registerStudentUrl = this.baseURL + '/register_student';
     this.state={
       showUploadImage:false,
       progress:false,
@@ -166,7 +174,7 @@ askRollnumber(classs,date){
     "Twelfth":"Tw"
   }
   let self = this;
-  axios.get('http://localhost:5000/getRollNumber/'+classess[classs]+"/"+new Date(date).getFullYear()+"/").then((resp)=>{
+  axios.get( self.baseURL + '/getRollNumber/'+classess[classs]+"/"+new Date(date).getFullYear()+"/").then((resp)=>{
   console.log(resp.data.successMessage);
   document.getElementById("rollnumber").value = resp.data.successMessage;
 self.setState({
@@ -403,7 +411,7 @@ reqImageUpload(e,fileName,useUniqueFileName,tags,folder,isPrivateFile,customCoor
 console.log(e.target);
     let publicKey="public_8PFAM11+fdiUFyUXnMIIsr9TP5s=" 
     let urlEndpoint="https://ik.imagekit.io/Dhankhar7924/" 
-    let authenticationEndpoint="http://localhost:5000/authenticate"
+    let authenticationEndpoint=this.baseURL + "/authenticate"
     
     let onError = (e, err) => {
       e.insertAdjacentHTML(
@@ -658,7 +666,7 @@ onError(err){
       <IKContext  
     publicKey="public_8PFAM11+fdiUFyUXnMIIsr9TP5s=" 
     urlEndpoint="https://ik.imagekit.io/Dhankhar7924/" 
-    authenticationEndpoint="http://localhost:5000/authenticate"
+    authenticationEndpoint={this.baseURL + "/authenticate"}
     >
     <IKUpload fileName={this.state.rollnumber} id="ImageUpload" isPrivateFile= {false} onChange={(e)=>{this.reqImageUpload(e,this.state.rollnumber,false,[],"StudentImages",false)}}/>
  </IKContext>:
